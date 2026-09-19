@@ -3,7 +3,7 @@
   "id": "openpets.system-resources",
   "name": "$t:plugin.name",
   "description": "$t:plugin.description",
-  "version": "1.5.0",
+  "version": "2.1.0",
   "runtime": "javascript",
   "icon": "plugin",
   "sdkVersion": "3.0.0",
@@ -14,17 +14,13 @@
       "cpu": "assets/cpu.svg",
       "ram": "assets/ram.svg",
       "gpu": "assets/gpu.svg",
-      "ssd": "assets/ssd.svg"
+      "disk": "assets/disk.svg"
     }
   },
   "permissions": [
     "pet:speak",
     "pet:reaction",
     "pet:pin",
-    "pet:move",
-    "pet:animate",
-    "pets:read",
-    "pets:manage",
     "schedule",
     "storage",
     "commands",
@@ -52,6 +48,42 @@
       "label": "$t:config.showHud.label",
       "description": "$t:config.showHud.description"
     },
+    "showCpu": {
+      "type": "boolean",
+      "default": true,
+      "label": "$t:config.showCpu.label",
+      "description": "$t:config.showCpu.description"
+    },
+    "showRam": {
+      "type": "boolean",
+      "default": true,
+      "label": "$t:config.showRam.label",
+      "description": "$t:config.showRam.description"
+    },
+    "showGpu": {
+      "type": "boolean",
+      "default": true,
+      "label": "$t:config.showGpu.label",
+      "description": "$t:config.showGpu.description"
+    },
+    "showDisk": {
+      "type": "boolean",
+      "default": true,
+      "label": "$t:config.showDisk.label",
+      "description": "$t:config.showDisk.description"
+    },
+    "showBattery": {
+      "type": "boolean",
+      "default": true,
+      "label": "$t:config.showBattery.label",
+      "description": "$t:config.showBattery.description"
+    },
+    "showNetwork": {
+      "type": "boolean",
+      "default": true,
+      "label": "$t:config.showNetwork.label",
+      "description": "$t:config.showNetwork.description"
+    },
     "pollSeconds": {
       "type": "number",
       "default": 10,
@@ -67,6 +99,30 @@
       "max": 99,
       "label": "$t:config.alertPercent.label",
       "description": "$t:config.alertPercent.description"
+    },
+    "alertCpu": {
+      "type": "boolean",
+      "default": true,
+      "label": "$t:config.alertCpu.label",
+      "description": "$t:config.alertCpu.description"
+    },
+    "alertRam": {
+      "type": "boolean",
+      "default": true,
+      "label": "$t:config.alertRam.label",
+      "description": "$t:config.alertRam.description"
+    },
+    "alertGpu": {
+      "type": "boolean",
+      "default": true,
+      "label": "$t:config.alertGpu.label",
+      "description": "$t:config.alertGpu.description"
+    },
+    "alertDisk": {
+      "type": "boolean",
+      "default": true,
+      "label": "$t:config.alertDisk.label",
+      "description": "$t:config.alertDisk.description"
     },
     "speakAlerts": {
       "type": "boolean",

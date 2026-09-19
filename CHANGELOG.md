@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.1.0
+
+- Added host-backed battery percentage/charging and aggregate network
+  download/upload reporting through status, speech, and `resources.get`; both
+  remain outside the four-item percentage HUD.
+- Added independent Battery and Network presentation settings with on defaults,
+  and made passive resource HUD refreshes yield to the normal-priority Virtual
+  Pet pin while explicit Show remains available.
+- GPU sustained alerts now require distinct host extended-metric samples rather
+  than counting repeated cached values.
+- Added independent CPU, RAM, GPU, and Disk HUD switches with on defaults and host-config persistence.
+- Added independent alert switches. CPU and GPU alerts require two consecutive fresh threshold readings from scheduled monitoring polls; assistant and UI requests do not advance the streak.
+- Kept RAM alerts explicit about usage rather than memory pressure, and kept Disk alerts about used system-volume capacity.
+- Older OpenPets hosts may omit optional battery and network fields; the plugin
+  keeps CPU/RAM and any host-provided GPU/Disk compatibility intact.
+
+## 2.0.0
+
+- Replaced the satellite pet with the host-rendered pinned HUD on the existing default pet.
+- Removed satellite-only movement, animation, pet-management, and pet-list permissions.
+- Made Show and Hide visibility durable across polling, configuration changes, and restarts.
+- Serialized metric polling, guarded late asynchronous work, and made shutdown cancel cleanly.
+- Display GPU and disk independently, preserve genuine zero values, and mark cached readings stale after collection failures.
+- Renamed the user-facing SSD label to Disk or its locale equivalent while preserving `resources.get` response field names.
+
 ## 1.5.0
 
 - Read optional aggregate GPU and system-volume usage directly from OpenPets `system:metrics` when the host supports them.
