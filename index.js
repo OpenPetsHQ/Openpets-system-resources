@@ -44,6 +44,10 @@ export const CATALOGS = {
     "config.showGpu.description": "Include GPU usage when the host provides it.",
     "config.showDisk.label": "Show Disk",
     "config.showDisk.description": "Include used system-volume capacity when the host provides it.",
+    "config.showBattery.label": "Show Battery",
+    "config.showBattery.description": "Include battery percentage and charging state in status and speech when available.",
+    "config.showNetwork.label": "Show Network",
+    "config.showNetwork.description": "Include download and upload rates in status and speech when available.",
     "config.pollSeconds.label": "Refresh interval (seconds)",
     "config.pollSeconds.description": "How often to sample host CPU and RAM metrics.",
     "config.alertPercent.label": "Alert threshold (%)",
@@ -74,11 +78,13 @@ export const CATALOGS = {
     "speech.snapshot": "CPU {cpu}, RAM {ram}.",
     "speech.snapshotFull": "CPU {cpu}, RAM {ram}, GPU {gpu}, Disk {disk}.",
     "speech.battery": "Battery {percent} percent ({state}).",
+    "speech.network": "Network download {download} and upload {upload}.",
     "speech.stale": "The last valid reading is stale.",
     "speech.unavailable": "Resource metrics are unavailable.",
     "speech.alert": "{label} is at {value} percent.",
     "status.line": "CPU {cpu} · RAM {ram}",
     "status.lineFull": "CPU {cpu} · RAM {ram} · GPU {gpu} · Disk {disk}",
+    "status.network": "Network ↓ {download} · ↑ {upload}",
     "status.stale": "Last valid reading: {details} · stale",
     "status.unavailable": "Resource metrics unavailable",
   },
@@ -108,6 +114,10 @@ export const CATALOGS = {
     "config.showGpu.description": "Neem GPU-gebruik op als de host dit levert.",
     "config.showDisk.label": "Toon schijf",
     "config.showDisk.description": "Neem gebruikte systeemvolumecapaciteit op als de host dit levert.",
+    "config.showBattery.label": "Toon batterij",
+    "config.showBattery.description": "Neem batterijpercentage en laadstatus op in status en spraak als die beschikbaar zijn.",
+    "config.showNetwork.label": "Toon netwerk",
+    "config.showNetwork.description": "Neem download- en uploadsnelheden op in status en spraak als die beschikbaar zijn.",
     "config.pollSeconds.label": "Verversinterval (seconden)",
     "config.pollSeconds.description": "Hoe vaak host-CPU en -RAM worden bemonsterd.",
     "config.alertPercent.label": "Drempel voor melding (%)",
@@ -138,11 +148,13 @@ export const CATALOGS = {
     "speech.snapshot": "CPU {cpu}, RAM {ram}.",
     "speech.snapshotFull": "CPU {cpu}, RAM {ram}, GPU {gpu}, schijf {disk}.",
     "speech.battery": "Batterij {percent} procent ({state}).",
+    "speech.network": "Netwerkdownload {download} en upload {upload}.",
     "speech.stale": "De laatste geldige meting is verouderd.",
     "speech.unavailable": "Bronmetingen zijn niet beschikbaar.",
     "speech.alert": "{label} staat op {value} procent.",
     "status.line": "CPU {cpu} · RAM {ram}",
     "status.lineFull": "CPU {cpu} · RAM {ram} · GPU {gpu} · Schijf {disk}",
+    "status.network": "Netwerk ↓ {download} · ↑ {upload}",
     "status.stale": "Laatste geldige meting: {details} · verouderd",
     "status.unavailable": "Bronmetingen niet beschikbaar",
   },
@@ -172,6 +184,10 @@ export const CATALOGS = {
     "config.showGpu.description": "Inclure l’utilisation GPU lorsque l’hôte la fournit.",
     "config.showDisk.label": "Afficher le disque",
     "config.showDisk.description": "Inclure la capacité utilisée du volume système lorsque l’hôte la fournit.",
+    "config.showBattery.label": "Afficher la batterie",
+    "config.showBattery.description": "Inclure le pourcentage et l’état de charge dans le statut et la parole lorsqu’ils sont disponibles.",
+    "config.showNetwork.label": "Afficher le réseau",
+    "config.showNetwork.description": "Inclure les débits descendant et montant dans le statut et la parole lorsqu’ils sont disponibles.",
     "config.pollSeconds.label": "Intervalle d’actualisation (secondes)",
     "config.pollSeconds.description": "Fréquence d’échantillonnage du CPU et de la RAM hôte.",
     "config.alertPercent.label": "Seuil d’alerte (%)",
@@ -202,11 +218,13 @@ export const CATALOGS = {
     "speech.snapshot": "CPU {cpu}, RAM {ram}.",
     "speech.snapshotFull": "CPU {cpu}, RAM {ram}, GPU {gpu}, disque {disk}.",
     "speech.battery": "Batterie à {percent} pour cent ({state}).",
+    "speech.network": "Téléchargement réseau {download} et envoi {upload}.",
     "speech.stale": "La dernière mesure valide est obsolète.",
     "speech.unavailable": "Les mesures des ressources sont indisponibles.",
     "speech.alert": "{label} est à {value} pour cent.",
     "status.line": "CPU {cpu} · RAM {ram}",
     "status.lineFull": "CPU {cpu} · RAM {ram} · GPU {gpu} · disque {disk}",
+    "status.network": "Réseau ↓ {download} · ↑ {upload}",
     "status.stale": "Dernière mesure valide : {details} · obsolète",
     "status.unavailable": "Mesures des ressources indisponibles",
   },
@@ -236,6 +254,10 @@ export const CATALOGS = {
     "config.showGpu.description": "GPU-Auslastung anzeigen, wenn der Host sie liefert.",
     "config.showDisk.label": "Datenträger anzeigen",
     "config.showDisk.description": "Belegte Systemvolume-Kapazität anzeigen, wenn der Host sie liefert.",
+    "config.showBattery.label": "Akku anzeigen",
+    "config.showBattery.description": "Akkustand und Ladestatus in Status und Sprache anzeigen, wenn verfügbar.",
+    "config.showNetwork.label": "Netzwerk anzeigen",
+    "config.showNetwork.description": "Download- und Uploadraten in Status und Sprache anzeigen, wenn verfügbar.",
     "config.pollSeconds.label": "Aktualisierungsintervall (Sekunden)",
     "config.pollSeconds.description": "Wie oft Host-CPU und RAM abgefragt werden.",
     "config.alertPercent.label": "Warnschwelle (%)",
@@ -266,11 +288,13 @@ export const CATALOGS = {
     "speech.snapshot": "CPU {cpu}, RAM {ram}.",
     "speech.snapshotFull": "CPU {cpu}, RAM {ram}, GPU {gpu}, Datenträger {disk}.",
     "speech.battery": "Akku bei {percent} Prozent ({state}).",
+    "speech.network": "Netzwerk-Download {download} und Upload {upload}.",
     "speech.stale": "Die letzte gültige Messung ist veraltet.",
     "speech.unavailable": "Ressourcenmessungen sind nicht verfügbar.",
     "speech.alert": "{label} liegt bei {value} Prozent.",
     "status.line": "CPU {cpu} · RAM {ram}",
     "status.lineFull": "CPU {cpu} · RAM {ram} · GPU {gpu} · Datenträger {disk}",
+    "status.network": "Netzwerk ↓ {download} · ↑ {upload}",
     "status.stale": "Letzte gültige Messung: {details} · veraltet",
     "status.unavailable": "Ressourcenmessungen nicht verfügbar",
   },
@@ -302,6 +326,13 @@ export function clampPercent(value) {
   return Math.max(0, Math.min(100, Math.round(n)));
 }
 
+function clampRate(value) {
+  if (value == null) return null;
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n * 100) / 100;
+}
+
 export function toneFor(percent) {
   if (percent == null) return "slate";
   if (percent >= 90) return "red";
@@ -311,6 +342,20 @@ export function toneFor(percent) {
 
 export function formatPercent(language, percent) {
   return percent == null ? t(language, "value.na") : `${percent}%`;
+}
+
+export function formatRate(language, bytesPerSecond) {
+  const value = clampRate(bytesPerSecond);
+  if (value == null) return t(language, "value.na");
+  const units = ["B/s", "KB/s", "MB/s", "GB/s"];
+  let index = 0;
+  let scaled = value;
+  while (scaled >= 1024 && index < units.length - 1) {
+    scaled /= 1024;
+    index += 1;
+  }
+  const digits = index === 0 || scaled >= 10 ? 0 : 1;
+  return `${scaled.toFixed(digits)} ${units[index]}`;
 }
 
 function metricValue(snapshot, key) {
@@ -343,20 +388,38 @@ function normalizedBattery(hostMetrics) {
   };
 }
 
+function normalizedNetwork(hostMetrics, extendedMetricsFresh) {
+  const network = extendedMetricsFresh === false ? null : hostMetrics?.network;
+  const download = clampRate(network?.downloadBytesPerSecond);
+  const upload = clampRate(network?.uploadBytesPerSecond);
+  return {
+    networkDownloadBytesPerSecond: download,
+    networkUploadBytesPerSecond: upload,
+    networkAvailable: download != null && upload != null,
+  };
+}
+
 export function mergeSnapshot(hostMetrics = {}, now = Date.now()) {
   const cpu = clampPercent(hostMetrics.cpuPercent);
   const ram = clampPercent(hostMetrics.memUsedPercent);
-  const gpu = clampPercent(hostMetrics.gpuPercent);
-  const disk = clampPercent(hostMetrics.diskUsedPercent);
-  const battery = normalizedBattery(hostMetrics);
+  const extendedMetricsFresh = hostMetrics?.extendedMetricsFresh !== false;
+  const gpu = extendedMetricsFresh ? clampPercent(hostMetrics.gpuPercent) : null;
+  const disk = extendedMetricsFresh ? clampPercent(hostMetrics.diskUsedPercent) : null;
+  const battery = extendedMetricsFresh ? normalizedBattery(hostMetrics) : { batteryPercent: null, batteryCharging: null, batteryAvailable: false };
+  const network = normalizedNetwork(hostMetrics, extendedMetricsFresh);
+  const extendedMetricsSampledAt = Number.isFinite(Number(hostMetrics?.extendedMetricsSampledAt))
+    ? Number(hostMetrics.extendedMetricsSampledAt)
+    : null;
   const snapshot = {
     freshness: "fresh",
     cpu,
     ram,
     gpu,
     disk,
-    extendedMetricsAvailable: gpu != null || disk != null,
+    extendedMetricsAvailable: gpu != null || disk != null || battery.batteryAvailable || network.networkAvailable,
     ...battery,
+    ...network,
+    extendedMetricsSampledAt,
     sampledAt: now,
     attemptedAt: now,
   };
@@ -380,6 +443,10 @@ export function unavailableSnapshot(attemptedAt = Date.now()) {
     batteryPercent: null,
     batteryCharging: null,
     batteryAvailable: false,
+    networkDownloadBytesPerSecond: null,
+    networkUploadBytesPerSecond: null,
+    networkAvailable: false,
+    extendedMetricsSampledAt: null,
     sampledAt: null,
     attemptedAt,
   };
@@ -394,6 +461,8 @@ export function readConfig(raw = {}, hostLocale = "en") {
     showRam: raw.showRam !== false,
     showGpu: raw.showGpu !== false,
     showDisk: raw.showDisk !== false,
+    showBattery: raw.showBattery !== false,
+    showNetwork: raw.showNetwork !== false,
     speakAlerts: raw.speakAlerts !== false,
     alertCpu: raw.alertCpu !== false,
     alertRam: raw.alertRam !== false,
@@ -413,16 +482,22 @@ function snapshotFromStored(value) {
   const disk = clampPercent(value.disk ?? value.ssd);
   const batteryPercent = clampPercent(value.batteryPercent);
   const batteryCharging = typeof value.batteryCharging === "boolean" ? value.batteryCharging : null;
+  const networkDownloadBytesPerSecond = clampRate(value.networkDownloadBytesPerSecond);
+  const networkUploadBytesPerSecond = clampRate(value.networkUploadBytesPerSecond);
   const snapshot = {
     freshness: "stale",
     cpu: clampPercent(value.cpu),
     ram: clampPercent(value.ram),
     gpu,
     disk,
-    extendedMetricsAvailable: gpu != null || disk != null,
     batteryPercent,
     batteryCharging,
     batteryAvailable: batteryPercent != null && batteryCharging != null,
+    networkDownloadBytesPerSecond,
+    networkUploadBytesPerSecond,
+    networkAvailable: networkDownloadBytesPerSecond != null && networkUploadBytesPerSecond != null,
+    extendedMetricsAvailable: gpu != null || disk != null || (batteryPercent != null && batteryCharging != null) || (networkDownloadBytesPerSecond != null && networkUploadBytesPerSecond != null),
+    extendedMetricsSampledAt: Number.isFinite(Number(value.extendedMetricsSampledAt)) ? Number(value.extendedMetricsSampledAt) : null,
     sampledAt,
     attemptedAt: Date.now(),
   };
@@ -486,7 +561,7 @@ function hudItem(ctx, language, key, percent, stale) {
   return { icon: ctx.assets.icon(key), value: percent, tone: toneFor(percent), label };
 }
 
-export function hudSpec(ctx, snapshot, language = "en", config) {
+export function hudSpec(ctx, snapshot, language = "en", config, priority = "low") {
   const visibleSnapshot = snapshotForHud(snapshot);
   if (!visibleSnapshot) return null;
   const stale = visibleSnapshot.freshness === "stale";
@@ -496,10 +571,13 @@ export function hudSpec(ctx, snapshot, language = "en", config) {
     .filter(Boolean)
     .slice(0, 4);
   if (items.length === 0) return null;
-  return { tone: "info", sticky: true, pin: true, dismissOn: [], priority: "normal", hud: { items } };
+  // Virtual Pet owns the normal-priority default-pet pin when both plugins
+  // are enabled. System Resources remains accessible through status, speech,
+  // and resources.get without repeatedly reclaiming that single host slot.
+  return { tone: "info", sticky: true, pin: true, dismissOn: [], priority, hud: { items } };
 }
 
-export function snapshotCopy(language, snapshot, kind) {
+export function snapshotCopy(language, snapshot, kind, config = {}) {
   if (!snapshot || snapshot.freshness === "unavailable" || !hasMetric(snapshot)) {
     return t(language, kind === "speech" ? "speech.unavailable" : "status.unavailable");
   }
@@ -510,7 +588,7 @@ export function snapshotCopy(language, snapshot, kind) {
     .map(([key, value]) => `${t(language, `hud.${key}`)} ${formatPercent(language, value)}`)
     .join(separator);
   const batteryState = snapshot.batteryCharging ? "battery.charging" : "battery.notCharging";
-  const batteryDetails = snapshot.batteryAvailable
+  const batteryDetails = config.showBattery !== false && snapshot.batteryAvailable
     ? kind === "speech"
       ? t(language, "speech.battery", {
         percent: String(snapshot.batteryPercent),
@@ -518,12 +596,32 @@ export function snapshotCopy(language, snapshot, kind) {
       })
       : `${t(language, "metric.battery")} ${formatPercent(language, snapshot.batteryPercent)} (${t(language, batteryState)})`
     : null;
-  const fullDetails = [details, batteryDetails].filter(Boolean).join(separator);
-  if (snapshot.freshness === "stale") {
-    if (kind === "speech") return `${fullDetails} ${t(language, "speech.stale")}`;
-    return t(language, "status.stale", { details: fullDetails });
+  const networkDetails = config.showNetwork !== false && snapshot.networkAvailable
+    ? kind === "speech"
+      ? t(language, "speech.network", {
+        download: formatRate(language, snapshot.networkDownloadBytesPerSecond),
+        upload: formatRate(language, snapshot.networkUploadBytesPerSecond),
+      })
+      : t(language, "status.network", {
+        download: formatRate(language, snapshot.networkDownloadBytesPerSecond),
+        upload: formatRate(language, snapshot.networkUploadBytesPerSecond),
+      })
+    : null;
+  const parts = [details, batteryDetails, networkDetails].filter(Boolean);
+  if (kind !== "speech") {
+    const statusText = (selected) => snapshot.freshness === "stale"
+      ? t(language, "status.stale", { details: selected.join(separator) })
+      : selected.join(separator);
+    if (statusText(parts).length > 120 && networkDetails) parts.pop();
+    if (statusText(parts).length > 120 && batteryDetails) parts.splice(Math.max(0, parts.indexOf(batteryDetails)), 1);
+    const fitted = statusText(parts);
+    return fitted.length <= 120 ? fitted : `${fitted.slice(0, 119)}…`;
   }
-  return kind === "speech" ? `${fullDetails}.` : fullDetails;
+  const fullDetails = parts.join(separator);
+  if (snapshot.freshness === "stale") {
+    return `${fullDetails} ${t(language, "speech.stale")}`;
+  }
+  return `${fullDetails}.`;
 }
 
 export function resourcesResult(snapshot) {
@@ -532,10 +630,17 @@ export function resourcesResult(snapshot) {
     ramPercent: metricValue(snapshot, "ram"),
     gpuPercent: metricValue(snapshot, "gpu"),
     diskUsedPercent: metricValue(snapshot, "disk"),
-    extendedMetricsAvailable: metricValue(snapshot, "gpu") != null || metricValue(snapshot, "disk") != null,
+    extendedMetricsAvailable: metricValue(snapshot, "gpu") != null
+      || metricValue(snapshot, "disk") != null
+      || snapshot?.batteryAvailable === true
+      || snapshot?.networkAvailable === true,
     batteryPercent: snapshot?.batteryPercent ?? null,
     batteryCharging: typeof snapshot?.batteryCharging === "boolean" ? snapshot.batteryCharging : null,
     batteryAvailable: snapshot?.batteryAvailable === true,
+    networkDownloadBytesPerSecond: snapshot?.networkDownloadBytesPerSecond ?? null,
+    networkUploadBytesPerSecond: snapshot?.networkUploadBytesPerSecond ?? null,
+    networkAvailable: snapshot?.networkAvailable === true,
+    extendedMetricsSampledAt: Number.isFinite(snapshot?.extendedMetricsSampledAt) ? snapshot.extendedMetricsSampledAt : null,
     freshness: snapshot?.freshness ?? "unavailable",
     sampledAt: Number.isFinite(snapshot?.sampledAt) ? snapshot.sampledAt : null,
   };
@@ -568,9 +673,23 @@ function isInactiveBubbleError(error) {
   return error instanceof Error && error.message === INACTIVE_BUBBLE_ERROR;
 }
 
+async function probeBubbleLiveness(state, bubble, priority) {
+  try {
+    // The host can synchronously reject a pin before the SDK bridge registers
+    // onDismiss. update() is the supported synchronous-liveness signal that
+    // remains available on the returned handle.
+    await bubble.update({ priority });
+    return true;
+  } catch (error) {
+    if (isInactiveBubbleError(error)) return false;
+    await warn(state, "system resources HUD liveness check failed", error);
+    return true;
+  }
+}
+
 async function updateHudForState(state, snapshot, generation) {
   if (!isCurrent(state, generation) || !effectiveVisibility(state) || state.hudSuppressed) return;
-  const spec = hudSpec(state.ctx, snapshot, state.config.language, state.config);
+  const spec = hudSpec(state.ctx, snapshot, state.config.language, state.config, state.hudPriority);
   if (!spec) {
     await dismissPinned(state);
     return;
@@ -606,6 +725,14 @@ async function updateHudForState(state, snapshot, generation) {
     await dismissHandle(state, bubble);
     return;
   }
+  if (!await probeBubbleLiveness(state, bubble, state.hudPriority)) {
+    state.hudSuppressed = true;
+    return;
+  }
+  if (!isCurrent(state, generation) || !effectiveVisibility(state) || state.hudSuppressed) {
+    await dismissHandle(state, bubble);
+    return;
+  }
   state.pinned = bubble;
   bubble.onDismiss((reason) => {
     if (state.pinned?.id !== bubble.id) return;
@@ -625,7 +752,7 @@ export async function publishStatus(ctx, snapshot, language = "en") {
 async function publishStatusForState(state, snapshot, generation) {
   if (!isCurrent(state, generation)) return;
   try {
-    await state.ctx.status.set({ text: snapshotCopy(state.config.language, snapshot, "status"), tone: statusTone(snapshot) });
+    await state.ctx.status.set({ text: snapshotCopy(state.config.language, snapshot, "status", state.config), tone: statusTone(snapshot) });
   } catch (error) {
     await warn(state, "system resources status update failed", error);
   }
@@ -646,6 +773,9 @@ function alertCandidates(snapshot, config, alertStreaks = {}) {
 }
 
 function updateAlertStreaks(state, snapshot) {
+  const gpuSampledAt = Number.isFinite(snapshot?.extendedMetricsSampledAt) ? snapshot.extendedMetricsSampledAt : null;
+  const distinctGpuSample = gpuSampledAt == null || state.lastGpuSampledAt !== gpuSampledAt;
+  if (gpuSampledAt != null && distinctGpuSample) state.lastGpuSampledAt = gpuSampledAt;
   for (const definition of METRIC_DEFINITIONS) {
     if (!definition.sustained) {
       state.alertStreaks[definition.key] = 0;
@@ -656,6 +786,7 @@ function updateAlertStreaks(state, snapshot) {
       && state.config[definition.alertKey] !== false
       && value != null
       && value >= state.config.alertPercent;
+    if (definition.key === "gpu" && value != null && !distinctGpuSample) continue;
     state.alertStreaks[definition.key] = sustained
       ? Math.min(SUSTAINED_ALERT_SAMPLES, state.alertStreaks[definition.key] + 1)
       : 0;
@@ -821,7 +952,10 @@ async function setHudVisibility(state, visible) {
   if (!state.active) return state.currentSnapshot;
   state.hudVisible = visible;
   state.visibilitySource = "command";
-  if (visible) state.hudSuppressed = false;
+  if (visible) {
+    state.hudSuppressed = false;
+    state.hudPriority = "normal";
+  }
   state.generation += 1;
   if (!visible) {
     await dismissPinned(state);
@@ -849,7 +983,10 @@ async function handleConfigChange(state, raw) {
   if (visibilityChanged) {
     state.hudVisible = next.showHud;
     state.visibilitySource = "config";
-    if (next.showHud) state.hudSuppressed = false;
+    if (next.showHud) {
+      state.hudSuppressed = false;
+      state.hudPriority = "low";
+    }
     if (!next.showHud) await dismissPinned(state);
     await persistVisibility(state);
   }
@@ -861,7 +998,7 @@ async function speakSnapshotForState(state) {
   const snapshot = await requestPoll(state, "snapshot");
   if (!state.active || !snapshot) return snapshot;
   try {
-    await state.ctx.pet.speak(snapshotCopy(state.config.language, snapshot, "speech"));
+    await state.ctx.pet.speak(snapshotCopy(state.config.language, snapshot, "speech", state.config));
   } catch (error) {
     await warn(state, "system resources snapshot speech failed", error);
   }
@@ -955,11 +1092,13 @@ export function register(OpenPetsPlugin) {
         visibilitySource: "config",
         visibilityDirty: false,
         hudSuppressed: false,
+        hudPriority: "low",
         pinned: null,
         currentSnapshot: null,
         lastFreshSnapshot: null,
         lastAlertAt: 0,
         alertStreaks: { cpu: 0, ram: 0, gpu: 0, disk: 0 },
+        lastGpuSampledAt: null,
         unsubscribeConfig: null,
         unsubscribeClick: null,
         assistantRegistered: false,
@@ -997,7 +1136,7 @@ export function register(OpenPetsPlugin) {
           await ctx.assistant.registerCapability(
             {
               id: "resources.get",
-              description: "Read current CPU and RAM usage, optional GPU and disk capacity, and battery state when the OpenPets host supports them.",
+              description: "Read current CPU and RAM usage, optional GPU and disk capacity, battery state, and network throughput when the OpenPets host supports them.",
               inputSchema: { type: "object", properties: {}, additionalProperties: false },
             },
             async () => resourcesResult(await requestPoll(state, "capability")),

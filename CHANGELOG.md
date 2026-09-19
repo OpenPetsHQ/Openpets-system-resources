@@ -2,6 +2,14 @@
 
 ## 2.1.0
 
+- Added host-backed battery percentage/charging and aggregate network
+  download/upload reporting through status, speech, and `resources.get`; both
+  remain outside the four-item percentage HUD.
+- Added independent Battery and Network presentation settings with on defaults,
+  and made passive resource HUD refreshes yield to the normal-priority Virtual
+  Pet pin while explicit Show remains available.
+- GPU sustained alerts now require distinct host extended-metric samples rather
+  than counting repeated cached values.
 - Added independent CPU, RAM, GPU, and Disk HUD switches with on defaults and host-config persistence.
 - Added independent alert switches. CPU and GPU alerts require two consecutive fresh threshold readings from scheduled monitoring polls; assistant and UI requests do not advance the streak.
 - Kept RAM alerts explicit about usage rather than memory pressure, and kept Disk alerts about used system-volume capacity.

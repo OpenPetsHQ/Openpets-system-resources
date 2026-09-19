@@ -72,6 +72,10 @@ assert.deepEqual(unavailable, {
   batteryPercent: null,
   batteryCharging: null,
   batteryAvailable: false,
+  networkDownloadBytesPerSecond: null,
+  networkUploadBytesPerSecond: null,
+  networkAvailable: false,
+  extendedMetricsSampledAt: null,
   sampledAt: 1234,
   attemptedAt: 1234,
 });
@@ -89,6 +93,8 @@ assert.equal(cfg.showCpu, true);
 assert.equal(cfg.showRam, true);
 assert.equal(cfg.showGpu, true);
 assert.equal(cfg.showDisk, true);
+assert.equal(cfg.showBattery, true);
+assert.equal(cfg.showNetwork, true);
 assert.equal(cfg.alertCpu, true);
 assert.equal(cfg.alertRam, true);
 assert.equal(cfg.alertGpu, true);
@@ -132,6 +138,17 @@ const unavailableBattery = mergeSnapshot({ cpuPercent: 1, memUsedPercent: 2, bat
 assert.equal(unavailableBattery.batteryPercent, null, "missing battery percentage stays unavailable");
 assert.equal(unavailableBattery.batteryCharging, false, "charging state is preserved independently");
 assert.equal(unavailableBattery.batteryAvailable, false, "partial battery data is not presented as available");
+const networkSnapshot = mergeSnapshot({ cpuPercent: 1, memUsedPercent: 2, network: { downloadBytesPerSecond: 2048, uploadBytesPerSecond: 512 } }, 1234);
+assert.equal(networkSnapshot.networkAvailable, true);
+assert.equal(networkSnapshot.extendedMetricsAvailable, true, "network availability is included in extended metrics");
+assert.equal(resourcesResult(networkSnapshot).networkDownloadBytesPerSecond, 2048);
+assert.equal(resourcesResult(networkSnapshot).networkUploadBytesPerSecond, 512);
+assert.match(snapshotCopy("en", networkSnapshot, "status"), /Network/);
+assert.match(snapshotCopy("en", networkSnapshot, "speech"), /download/);
+const unavailableNetwork = mergeSnapshot({ cpuPercent: 1, memUsedPercent: 2, network: { downloadBytesPerSecond: null, uploadBytesPerSecond: null } }, 1234);
+assert.deepEqual([unavailableNetwork.networkDownloadBytesPerSecond, unavailableNetwork.networkUploadBytesPerSecond, unavailableNetwork.networkAvailable], [null, null, false], "explicitly unavailable network readings stay null");
+const staleExtended = mergeSnapshot({ cpuPercent: 12, memUsedPercent: 34, gpuPercent: 90, diskUsedPercent: 80, battery: { percent: 50, charging: false }, network: { downloadBytesPerSecond: 100, uploadBytesPerSecond: 50 }, extendedMetricsFresh: false, extendedMetricsSampledAt: 77 }, 1234);
+assert.deepEqual([staleExtended.gpu, staleExtended.disk, staleExtended.batteryPercent, staleExtended.networkDownloadBytesPerSecond], [null, null, null, null], "expired optional metrics stay unavailable");
 
 async function flush() {
   await Promise.resolve();
@@ -166,6 +183,7 @@ async function runCapability(h, id) {
   const bubble = h.calls.bubbles.at(-1);
   assert.equal(bubble.petId, "default", "resource HUD must use the existing default pet");
   assert.deepEqual(h.calls.spawnedPets, [], "integrated HUD must not create a satellite pet");
+  assert.equal(bubble.spec.priority, "low", "background resource refresh yields to the normal-priority Virtual Pet HUD");
   assert.deepEqual(bubble.spec.hud.items.map((item) => item.value), [5, 40]);
   assert.match(String(h.calls.status.at(-1).text), /CPU 5% · RAM 40%/);
   assert.doesNotMatch(String(h.calls.status.at(-1).text), /SSD|satellite|sidecar/i);
@@ -194,6 +212,7 @@ async function runCapability(h, id) {
   assert.equal(h.calls.bubbles.length, 0, "HUD stays off when the setting is false");
   await h.runCommand("show");
   assert.equal(h.calls.bubbles.at(-1).petId, "default", "Show works even when the setting was false");
+  assert.equal(h.calls.bubbles.at(-1).spec.priority, "normal", "explicit Show can claim the shared pinned slot");
   await h.runCommand("hide");
   const countAfterHide = h.calls.bubbles.length;
   await tick(h.ctx, Date.now() + 30_000);
@@ -487,6 +506,23 @@ async function runCapability(h, id) {
 }
 
 {
+  const h = makeHarness({ nowMs: 10_800_000, config: { alertPercent: 90, alertCpu: false, alertRam: false, alertGpu: true, alertDisk: false } });
+  h.system.setMetrics({ cpuPercent: 10, memUsedPercent: 20, gpuPercent: 95, extendedMetricsSampledAt: 1 });
+  await h.start();
+  await tick(h.ctx, Date.now() + 1_000);
+  assert.equal(h.calls.react.length, 0, "one fresh GPU sample starts but does not finish the streak");
+  await runCapability(h, "resources.get");
+  await h.runCommand("show");
+  await h.setConfig({ showCpu: false, showRam: true, showGpu: true, showDisk: true, alertPercent: 90, alertCpu: false, alertRam: false, alertGpu: true, alertDisk: false });
+  await tick(h.ctx, Date.now() + 2_000);
+  assert.equal(h.calls.react.length, 0, "assistant and UI reads of a cached GPU sample cannot advance the streak");
+  h.system.setMetrics({ cpuPercent: 10, memUsedPercent: 20, gpuPercent: 95, extendedMetricsSampledAt: 2 });
+  await tick(h.ctx, Date.now() + 3_000);
+  assert.equal(h.calls.react.length, 1, "two distinct scheduled GPU samples trigger the alert");
+  await h.stop();
+}
+
+{
   const h = makeHarness({ nowMs: 10_900_000, config: { alertPercent: 90, alertCpu: true, alertRam: true, alertGpu: true, alertDisk: true } });
   h.system.setMetrics({ cpuPercent: 10, memUsedPercent: 20, gpuPercent: null, diskUsedPercent: null });
   await h.start();
@@ -633,6 +669,10 @@ assert.deepEqual(manifest.permissions.slice().sort(), PERMISSIONS.slice().sort()
 assert.equal(manifest.assets.icons.disk, "assets/disk.svg");
 assert.equal(manifest.assets.icons.ssd, undefined);
 for (const key of ["showCpu", "showRam", "showGpu", "showDisk", "alertCpu", "alertRam", "alertGpu", "alertDisk"]) {
+  assert.equal(manifest.configSchema[key].type, "boolean", `${key} is a boolean setting`);
+  assert.equal(manifest.configSchema[key].default, true, `${key} keeps the default-on behavior`);
+}
+for (const key of ["showBattery", "showNetwork"]) {
   assert.equal(manifest.configSchema[key].type, "boolean", `${key} is a boolean setting`);
   assert.equal(manifest.configSchema[key].default, true, `${key} keeps the default-on behavior`);
 }

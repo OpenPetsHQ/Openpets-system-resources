@@ -72,6 +72,18 @@
       "label": "$t:config.showDisk.label",
       "description": "$t:config.showDisk.description"
     },
+    "showBattery": {
+      "type": "boolean",
+      "default": true,
+      "label": "$t:config.showBattery.label",
+      "description": "$t:config.showBattery.description"
+    },
+    "showNetwork": {
+      "type": "boolean",
+      "default": true,
+      "label": "$t:config.showNetwork.label",
+      "description": "$t:config.showNetwork.description"
+    },
     "pollSeconds": {
       "type": "number",
       "default": 10,
