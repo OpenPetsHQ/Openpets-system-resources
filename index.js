@@ -860,11 +860,11 @@ async function executePoll(state, purposes, generation, requestedAt) {
   if (!isCurrent(state, generation)) return snapshot;
 
   state.currentSnapshot = snapshot;
-  // The SDK exposes metric values but no sample identity. The desktop host
-  // refreshes CPU/RAM on each metrics() call and caches only extended GPU/disk
-  // readings, so the scheduled poll is the supported monitoring-sample
-  // boundary. Assistant and UI requests may read the same host state, but
-  // must not manufacture sustained CPU/GPU samples.
+  // Current desktop hosts expose an identity for each successful extended
+  // metrics collection. Older hosts do not, so the scheduled poll remains the
+  // fallback monitoring-sample boundary there. Assistant and UI requests may
+  // read the same host state, but must not manufacture sustained CPU/GPU
+  // samples.
   if (purposes.has("scheduled")) updateAlertStreaks(state, snapshot);
   if (snapshot.freshness === "fresh") {
     state.lastFreshSnapshot = snapshot;
