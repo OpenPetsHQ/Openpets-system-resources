@@ -69,6 +69,9 @@ assert.deepEqual(unavailable, {
   gpu: null,
   disk: null,
   extendedMetricsAvailable: false,
+  batteryPercent: null,
+  batteryCharging: null,
+  batteryAvailable: false,
   sampledAt: 1234,
   attemptedAt: 1234,
 });
@@ -82,16 +85,53 @@ const cfg = readConfig({ pollSeconds: 3, alertPercent: 140, showHud: false });
 assert.equal(cfg.pollSeconds, 5);
 assert.equal(cfg.alertPercent, 99);
 assert.equal(cfg.showHud, false);
+assert.equal(cfg.showCpu, true);
+assert.equal(cfg.showRam, true);
+assert.equal(cfg.showGpu, true);
+assert.equal(cfg.showDisk, true);
+assert.equal(cfg.alertCpu, true);
+assert.equal(cfg.alertRam, true);
+assert.equal(cfg.alertGpu, true);
+assert.equal(cfg.alertDisk, true);
 assert.equal(cfg.language, "en");
 assert.equal(readConfig({ language: "fr" }, "de").language, "fr");
 assert.equal(readConfig({ language: "auto" }, "de-DE").language, "de");
+const selectiveCfg = readConfig({ showCpu: false, showRam: false, showGpu: true, showDisk: false, alertCpu: false, alertRam: false, alertGpu: false, alertDisk: true });
+assert.deepEqual(
+  [selectiveCfg.showCpu, selectiveCfg.showRam, selectiveCfg.showGpu, selectiveCfg.showDisk],
+  [false, false, true, false],
+  "display preferences are independently parsed",
+);
+assert.deepEqual(
+  [selectiveCfg.alertCpu, selectiveCfg.alertRam, selectiveCfg.alertGpu, selectiveCfg.alertDisk],
+  [false, false, false, true],
+  "alert preferences are independently parsed",
+);
 
 const zeroSpec = hudSpec({ assets: { icon: (name) => ({ kind: "icon", name }) } }, mergeSnapshot({ cpuPercent: 0, memUsedPercent: 0, diskUsedPercent: 0 }, 1));
 assert.deepEqual(zeroSpec.hud.items.map((item) => item.value), [0, 0, 0]);
 assert.deepEqual(zeroSpec.hud.items.map((item) => item.icon.name), ["cpu", "ram", "disk"]);
 assert.equal(hudSpec({ assets: { icon: (name) => ({ kind: "icon", name }) } }, mergeSnapshot({}, 1)), null);
+const allMetrics = mergeSnapshot({ cpuPercent: 10, memUsedPercent: 20, gpuPercent: 30, diskUsedPercent: 40 }, 1);
+const selectiveSpec = hudSpec({ assets: { icon: (name) => ({ kind: "icon", name }) } }, allMetrics, "en", selectiveCfg);
+assert.deepEqual(selectiveSpec.hud.items.map((item) => item.icon.name), ["gpu"]);
+assert.equal(selectiveSpec.hud.items.length <= 4, true, "HUD respects the host's four-item limit");
+assert.equal(
+  hudSpec({ assets: { icon: (name) => ({ kind: "icon", name }) } }, allMetrics, "en", readConfig({ showCpu: false, showRam: false, showGpu: false, showDisk: false })),
+  null,
+  "all disabled indicators produce no invalid empty HUD",
+);
 assert.match(snapshotCopy("en", staleSnapshot(merged, 2000), "status"), /stale/);
 assert.equal(resourcesResult(staleSnapshot(merged, 2000)).freshness, "stale");
+const batterySnapshot = mergeSnapshot({ cpuPercent: 1, memUsedPercent: 2, battery: { percent: 84, charging: true } }, 1234);
+assert.equal(batterySnapshot.batteryPercent, 84);
+assert.equal(batterySnapshot.batteryCharging, true);
+assert.equal(resourcesResult(batterySnapshot).batteryPercent, 84);
+assert.equal(resourcesResult(batterySnapshot).batteryCharging, true);
+const unavailableBattery = mergeSnapshot({ cpuPercent: 1, memUsedPercent: 2, battery: { percent: null, charging: false } }, 1234);
+assert.equal(unavailableBattery.batteryPercent, null, "missing battery percentage stays unavailable");
+assert.equal(unavailableBattery.batteryCharging, false, "charging state is preserved independently");
+assert.equal(unavailableBattery.batteryAvailable, false, "partial battery data is not presented as available");
 
 async function flush() {
   await Promise.resolve();
@@ -166,6 +206,29 @@ async function runCapability(h, id) {
 }
 
 {
+  const h = makeHarness({
+    nowMs: 3_250_000,
+    config: { showCpu: false, showRam: true, showGpu: true, showDisk: false },
+  });
+  h.system.setMetrics({ cpuPercent: 10, memUsedPercent: 20, gpuPercent: 30, diskUsedPercent: 40 });
+  await h.start();
+  assert.deepEqual(h.calls.bubbles.at(-1).spec.hud.items.map((item) => item.icon.name), ["ram", "gpu"]);
+  await h.setConfig({ showCpu: true, showRam: false, showGpu: false, showDisk: false });
+  assert.deepEqual(h.calls.bubbles.at(-1).spec.hud.items.map((item) => item.icon.name), ["cpu"], "display changes update the running HUD immediately");
+  await h.setConfig({ showCpu: false, showRam: false, showGpu: false, showDisk: false });
+  assert.equal(h.calls.bubbles.at(-1).dismissed, true, "disabling every indicator dismisses the existing HUD");
+  const countAfterDisable = h.calls.bubbles.length;
+  await h.runCommand("show");
+  assert.equal(h.calls.bubbles.length, countAfterDisable, "Show does not create an empty HUD");
+  await h.setConfig({ showCpu: false, showRam: false, showGpu: false, showDisk: true });
+  assert.deepEqual(h.calls.bubbles.at(-1).spec.hud.items.map((item) => item.icon.name), ["disk"]);
+  await h.stop();
+  await h.start();
+  assert.deepEqual(h.calls.bubbles.at(-1).spec.hud.items.map((item) => item.icon.name), ["disk"], "display preferences survive a plugin restart");
+  await h.stop();
+}
+
+{
   const h = makeHarness({ nowMs: 3_500_000 });
   await h.start();
   const bubble = h.calls.bubbles.at(-1);
@@ -186,6 +249,8 @@ async function runCapability(h, id) {
     ram: 0,
     gpu: null,
     disk: undefined,
+    batteryPercent: 72,
+    batteryCharging: true,
     sampledAt: 3_500_000,
   });
   h.ctx.system.metrics = async () => { throw new Error("temporary metrics outage"); };
@@ -198,6 +263,8 @@ async function runCapability(h, id) {
   assert.equal(restored.ramPercent, 0, "restored zero remains zero");
   assert.equal(restored.gpuPercent, null, "restored missing GPU remains null");
   assert.equal(restored.diskUsedPercent, null, "restored missing disk remains null");
+  assert.equal(restored.batteryPercent, 72, "restored battery percentage remains available");
+  assert.equal(restored.batteryCharging, true, "restored charging state remains available");
   await h.stop();
 }
 
@@ -323,14 +390,71 @@ async function runCapability(h, id) {
   const h = makeHarness({ nowMs: 10_000_000 });
   h.system.setMetrics({ cpuPercent: 96, memUsedPercent: 40 });
   await h.start();
-  const firstAlertCount = h.calls.react.length;
-  assert.equal(firstAlertCount, 1);
   const base = Date.now();
+  assert.equal(h.calls.react.length, 0, "a single CPU spike does not alert");
+  await tick(h.ctx, base + 1_000);
+  const firstAlertCount = h.calls.react.length;
+  assert.equal(firstAlertCount, 1, "CPU alerts after two sustained threshold samples");
   h.system.setMetrics({ cpuPercent: 97, memUsedPercent: 40 });
   await tick(h.ctx, base + 60_000);
   assert.equal(h.calls.react.length, firstAlertCount, "alert cooldown suppresses repeated alerts");
-  await tick(h.ctx, base + ALERT_COOLDOWN_MS);
+  await tick(h.ctx, base + ALERT_COOLDOWN_MS + 1_000);
   assert.equal(h.calls.react.length, firstAlertCount + 1, "alert cooldown expires normally");
+  await h.stop();
+}
+
+{
+  const h = makeHarness({ nowMs: 10_500_000, config: { alertPercent: 90, alertCpu: false, alertRam: true, alertGpu: true, alertDisk: false } });
+  h.system.setMetrics({ cpuPercent: 99, memUsedPercent: 95, gpuPercent: 95, diskUsedPercent: 95 });
+  await h.start();
+  assert.equal(h.calls.react.length, 1, "RAM usage remains an individually configurable immediate alert");
+  assert.match(h.calls.speak.at(-1), /RAM usage/);
+  await tick(h.ctx, Date.now() + 1_000);
+  assert.equal(h.calls.react.length, 1, "GPU needs a second sustained sample but cooldown does not create another alert");
+  await h.stop();
+}
+
+{
+  const h = makeHarness({ nowMs: 10_700_000, config: { alertPercent: 90, alertCpu: false, alertRam: false, alertGpu: true, alertDisk: false } });
+  h.system.setMetrics({ cpuPercent: 10, memUsedPercent: 20, gpuPercent: 95 });
+  await h.start();
+  assert.equal(h.calls.react.length, 0, "disabled alert metrics stay silent");
+  await tick(h.ctx, Date.now() + 1_000);
+  assert.equal(h.calls.react.length, 1, "GPU alerts after sustained usage when enabled");
+  h.system.setMetrics({ cpuPercent: 10, memUsedPercent: 20, gpuPercent: 20 });
+  await tick(h.ctx, Date.now() + 2_000);
+  h.system.setMetrics({ cpuPercent: 10, memUsedPercent: 20, gpuPercent: 95 });
+  await tick(h.ctx, Date.now() + ALERT_COOLDOWN_MS + 3_000);
+  assert.equal(h.calls.react.length, 1, "recovery resets the GPU sustained counter");
+  await tick(h.ctx, Date.now() + ALERT_COOLDOWN_MS + 4_000);
+  assert.equal(h.calls.react.length, 2, "GPU alerts again only after another sustained crossing");
+  await h.stop();
+}
+
+{
+  const h = makeHarness({ nowMs: 10_900_000, config: { alertPercent: 90, alertCpu: true, alertRam: true, alertGpu: true, alertDisk: true } });
+  h.system.setMetrics({ cpuPercent: 10, memUsedPercent: 20, gpuPercent: null, diskUsedPercent: null });
+  await h.start();
+  h.system.setMetrics({ cpuPercent: 10, memUsedPercent: 20, gpuPercent: null, diskUsedPercent: null });
+  await tick(h.ctx, Date.now() + 1_000);
+  assert.equal(h.calls.react.length, 0, "missing optional metrics cannot alert");
+  h.ctx.system.metrics = async () => { throw new Error("stale readings"); };
+  await tick(h.ctx, Date.now() + 2_000);
+  assert.equal(h.calls.react.length, 0, "stale readings cannot alert");
+  await h.stop();
+}
+
+{
+  const h = makeHarness({ nowMs: 11_000_000, config: { alertPercent: 90, alertCpu: false, alertRam: false, alertGpu: false, alertDisk: true } });
+  h.system.setMetrics({ cpuPercent: 10, memUsedPercent: 20, diskUsedPercent: 95 });
+  await h.start();
+  assert.equal(h.calls.react.length, 1, "disk capacity has its own alert switch");
+  assert.match(h.calls.speak.at(-1), /Disk capacity/);
+  await h.stop();
+  await h.start();
+  assert.equal(h.calls.react.length, 1, "the alert cooldown survives a plugin restart");
+  await h.setConfig({ alertPercent: 95, alertCpu: false, alertRam: false, alertGpu: false, alertDisk: true });
+  assert.equal(h.calls.react.length, 1, "changing alert settings does not clear the persisted cooldown");
   await h.stop();
 }
 
@@ -449,9 +573,21 @@ async function runCapability(h, id) {
 
 const manifest = JSON.parse(await readFile(new URL("./openpets.plugin.json", import.meta.url), "utf8"));
 assert.equal(manifest.id, "openpets.system-resources");
-assert.equal(manifest.version, "2.0.0");
+assert.equal(manifest.version, "2.1.0");
 assert.deepEqual(manifest.permissions.slice().sort(), PERMISSIONS.slice().sort());
 assert.equal(manifest.assets.icons.disk, "assets/disk.svg");
 assert.equal(manifest.assets.icons.ssd, undefined);
+for (const key of ["showCpu", "showRam", "showGpu", "showDisk", "alertCpu", "alertRam", "alertGpu", "alertDisk"]) {
+  assert.equal(manifest.configSchema[key].type, "boolean", `${key} is a boolean setting`);
+  assert.equal(manifest.configSchema[key].default, true, `${key} keeps the default-on behavior`);
+}
+for (const field of Object.values(manifest.configSchema)) {
+  for (const property of ["label", "description"]) {
+    const reference = field[property];
+    assert.equal(typeof reference, "string");
+    assert.equal(reference.startsWith("$t:"), true);
+    assert.equal(Object.hasOwn(LOCALES.en, reference.slice(3)), true, `${property} resolves in English`);
+  }
+}
 
 console.log("openpets.system-resources: all checks passed.");

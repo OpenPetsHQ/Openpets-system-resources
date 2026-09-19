@@ -5,25 +5,57 @@ export const ALERT_COOLDOWN_MS = 10 * 60_000;
 export const DEFAULT_POLL_SECONDS = 10;
 export const DEFAULT_ALERT_PERCENT = 90;
 export const DEFAULT_LANGUAGE = "auto";
+export const SUSTAINED_ALERT_SAMPLES = 2;
+export const METRIC_KEYS = ["cpu", "ram", "gpu", "disk"];
 const MAX_SCHEDULE_REGISTRATION_ATTEMPTS = 2;
 const INACTIVE_BUBBLE_ERROR = "Plugin bubble is no longer live.";
+
+const METRIC_DEFINITIONS = [
+  { key: "cpu", showKey: "showCpu", alertKey: "alertCpu", sustained: true },
+  { key: "ram", showKey: "showRam", alertKey: "alertRam", sustained: false },
+  { key: "gpu", showKey: "showGpu", alertKey: "alertGpu", sustained: true },
+  { key: "disk", showKey: "showDisk", alertKey: "alertDisk", sustained: false },
+];
 
 export const CATALOGS = {
   en: {
     "plugin.name": "System Resources",
-    "plugin.description": "Show live CPU and RAM meters on your pet.",
+    "plugin.description": "Show live CPU and RAM meters, plus optional GPU and Disk metrics, on your pet.",
     "hud.cpu": "CPU",
     "hud.ram": "RAM",
     "hud.gpu": "GPU",
     "hud.disk": "Disk",
+    "metric.cpu": "CPU usage",
+    "metric.ram": "RAM usage",
+    "metric.gpu": "GPU usage",
+    "metric.disk": "Disk capacity",
+    "metric.battery": "Battery",
+    "battery.charging": "charging",
+    "battery.notCharging": "not charging",
     "value.na": "—",
     "value.stale": "stale",
     "config.showHud.label": "Show resource HUD",
     "config.showHud.description": "Keep a compact CPU and RAM overlay on your pet.",
+    "config.showCpu.label": "Show CPU",
+    "config.showCpu.description": "Include CPU usage in the pinned HUD.",
+    "config.showRam.label": "Show RAM",
+    "config.showRam.description": "Include RAM usage in the pinned HUD.",
+    "config.showGpu.label": "Show GPU",
+    "config.showGpu.description": "Include GPU usage when the host provides it.",
+    "config.showDisk.label": "Show Disk",
+    "config.showDisk.description": "Include used system-volume capacity when the host provides it.",
     "config.pollSeconds.label": "Refresh interval (seconds)",
     "config.pollSeconds.description": "How often to sample host CPU and RAM metrics.",
     "config.alertPercent.label": "Alert threshold (%)",
-    "config.alertPercent.description": "Speak when any meter stays at or above this value.",
+    "config.alertPercent.description": "Speak when an enabled meter reaches this value; CPU and GPU require two readings.",
+    "config.alertCpu.label": "Alert on CPU usage",
+    "config.alertCpu.description": "Require two consecutive high CPU readings before speaking.",
+    "config.alertRam.label": "Alert on RAM usage",
+    "config.alertRam.description": "Alert on high RAM usage. This does not measure memory pressure.",
+    "config.alertGpu.label": "Alert on GPU usage",
+    "config.alertGpu.description": "Require two consecutive high GPU readings before speaking.",
+    "config.alertDisk.label": "Alert on disk capacity",
+    "config.alertDisk.description": "Alert when used system-volume capacity reaches the threshold.",
     "config.speakAlerts.label": "Speak on high load",
     "config.speakAlerts.description": "Let the pet call out when a meter crosses the alert threshold.",
     "config.language.label": "Language",
@@ -41,6 +73,7 @@ export const CATALOGS = {
     "command.snapshot.description": "Have the pet read the current CPU and RAM levels.",
     "speech.snapshot": "CPU {cpu}, RAM {ram}.",
     "speech.snapshotFull": "CPU {cpu}, RAM {ram}, GPU {gpu}, Disk {disk}.",
+    "speech.battery": "Battery {percent} percent ({state}).",
     "speech.stale": "The last valid reading is stale.",
     "speech.unavailable": "Resource metrics are unavailable.",
     "speech.alert": "{label} is at {value} percent.",
@@ -51,19 +84,42 @@ export const CATALOGS = {
   },
   nl: {
     "plugin.name": "Systeembronnen",
-    "plugin.description": "Toon live CPU- en RAM-meters op je pet.",
+    "plugin.description": "Toon live CPU- en RAM-meters en optionele GPU- en schijfmetingen op je pet.",
     "hud.cpu": "CPU",
     "hud.ram": "RAM",
     "hud.gpu": "GPU",
     "hud.disk": "Schijf",
+    "metric.cpu": "CPU-gebruik",
+    "metric.ram": "RAM-gebruik",
+    "metric.gpu": "GPU-gebruik",
+    "metric.disk": "Schijfcapaciteit",
+    "metric.battery": "Batterij",
+    "battery.charging": "wordt opgeladen",
+    "battery.notCharging": "niet aan het opladen",
     "value.na": "—",
     "value.stale": "verouderd",
     "config.showHud.label": "Toon bronnen-HUD",
     "config.showHud.description": "Houd een compact CPU- en RAM-overzicht op de pet.",
+    "config.showCpu.label": "Toon CPU",
+    "config.showCpu.description": "Neem CPU-gebruik op in de vastgezette HUD.",
+    "config.showRam.label": "Toon RAM",
+    "config.showRam.description": "Neem RAM-gebruik op in de vastgezette HUD.",
+    "config.showGpu.label": "Toon GPU",
+    "config.showGpu.description": "Neem GPU-gebruik op als de host dit levert.",
+    "config.showDisk.label": "Toon schijf",
+    "config.showDisk.description": "Neem gebruikte systeemvolumecapaciteit op als de host dit levert.",
     "config.pollSeconds.label": "Verversinterval (seconden)",
     "config.pollSeconds.description": "Hoe vaak host-CPU en -RAM worden bemonsterd.",
     "config.alertPercent.label": "Drempel voor melding (%)",
-    "config.alertPercent.description": "Spreek als een meter op of boven deze waarde blijft.",
+    "config.alertPercent.description": "Spreek als een ingeschakelde meter deze waarde bereikt; CPU en GPU vereisen twee metingen.",
+    "config.alertCpu.label": "Melding bij CPU-gebruik",
+    "config.alertCpu.description": "Spreek pas na twee opeenvolgende hoge CPU-metingen.",
+    "config.alertRam.label": "Melding bij RAM-gebruik",
+    "config.alertRam.description": "Meld hoog RAM-gebruik. Dit meet geen geheugendruk.",
+    "config.alertGpu.label": "Melding bij GPU-gebruik",
+    "config.alertGpu.description": "Spreek pas na twee opeenvolgende hoge GPU-metingen.",
+    "config.alertDisk.label": "Melding bij schijfcapaciteit",
+    "config.alertDisk.description": "Meld wanneer de gebruikte systeemvolumecapaciteit de drempel bereikt.",
     "config.speakAlerts.label": "Spreek bij hoge belasting",
     "config.speakAlerts.description": "Laat de pet waarschuwen als een meter de drempel overschrijdt.",
     "config.language.label": "Taal",
@@ -81,6 +137,7 @@ export const CATALOGS = {
     "command.snapshot.description": "Laat de pet de huidige CPU en RAM voorlezen.",
     "speech.snapshot": "CPU {cpu}, RAM {ram}.",
     "speech.snapshotFull": "CPU {cpu}, RAM {ram}, GPU {gpu}, schijf {disk}.",
+    "speech.battery": "Batterij {percent} procent ({state}).",
     "speech.stale": "De laatste geldige meting is verouderd.",
     "speech.unavailable": "Bronmetingen zijn niet beschikbaar.",
     "speech.alert": "{label} staat op {value} procent.",
@@ -91,19 +148,42 @@ export const CATALOGS = {
   },
   fr: {
     "plugin.name": "Ressources système",
-    "plugin.description": "Affiche les compteurs CPU et RAM sur le familier.",
+    "plugin.description": "Affiche les compteurs CPU et RAM, ainsi que les mesures GPU et disque facultatives, sur le familier.",
     "hud.cpu": "CPU",
     "hud.ram": "RAM",
     "hud.gpu": "GPU",
     "hud.disk": "Disque",
+    "metric.cpu": "Utilisation CPU",
+    "metric.ram": "Utilisation RAM",
+    "metric.gpu": "Utilisation GPU",
+    "metric.disk": "Capacité du disque",
+    "metric.battery": "Batterie",
+    "battery.charging": "en charge",
+    "battery.notCharging": "pas en charge",
     "value.na": "—",
     "value.stale": "obsolète",
     "config.showHud.label": "Afficher le HUD des ressources",
     "config.showHud.description": "Garde un overlay CPU et RAM compact sur le familier.",
+    "config.showCpu.label": "Afficher le CPU",
+    "config.showCpu.description": "Inclure l’utilisation CPU dans le HUD épinglé.",
+    "config.showRam.label": "Afficher la RAM",
+    "config.showRam.description": "Inclure l’utilisation RAM dans le HUD épinglé.",
+    "config.showGpu.label": "Afficher le GPU",
+    "config.showGpu.description": "Inclure l’utilisation GPU lorsque l’hôte la fournit.",
+    "config.showDisk.label": "Afficher le disque",
+    "config.showDisk.description": "Inclure la capacité utilisée du volume système lorsque l’hôte la fournit.",
     "config.pollSeconds.label": "Intervalle d’actualisation (secondes)",
     "config.pollSeconds.description": "Fréquence d’échantillonnage du CPU et de la RAM hôte.",
     "config.alertPercent.label": "Seuil d’alerte (%)",
-    "config.alertPercent.description": "Parler lorsqu’un compteur reste à cette valeur ou au-dessus.",
+    "config.alertPercent.description": "Parler lorsqu’un compteur activé atteint cette valeur ; le CPU et le GPU exigent deux mesures.",
+    "config.alertCpu.label": "Alerter pour l’utilisation CPU",
+    "config.alertCpu.description": "Exiger deux mesures CPU élevées consécutives avant de parler.",
+    "config.alertRam.label": "Alerter pour l’utilisation RAM",
+    "config.alertRam.description": "Alerter en cas d’utilisation RAM élevée. Cela ne mesure pas la pression mémoire.",
+    "config.alertGpu.label": "Alerter pour l’utilisation GPU",
+    "config.alertGpu.description": "Exiger deux mesures GPU élevées consécutives avant de parler.",
+    "config.alertDisk.label": "Alerter pour la capacité du disque",
+    "config.alertDisk.description": "Alerter lorsque la capacité utilisée du volume système atteint le seuil.",
     "config.speakAlerts.label": "Parler en cas de charge élevée",
     "config.speakAlerts.description": "Le familier prévient lorsqu’un compteur dépasse le seuil.",
     "config.language.label": "Langue",
@@ -121,6 +201,7 @@ export const CATALOGS = {
     "command.snapshot.description": "Faire lire au familier le CPU et la RAM actuels.",
     "speech.snapshot": "CPU {cpu}, RAM {ram}.",
     "speech.snapshotFull": "CPU {cpu}, RAM {ram}, GPU {gpu}, disque {disk}.",
+    "speech.battery": "Batterie à {percent} pour cent ({state}).",
     "speech.stale": "La dernière mesure valide est obsolète.",
     "speech.unavailable": "Les mesures des ressources sont indisponibles.",
     "speech.alert": "{label} est à {value} pour cent.",
@@ -131,19 +212,42 @@ export const CATALOGS = {
   },
   de: {
     "plugin.name": "Systemressourcen",
-    "plugin.description": "Zeigt Live-CPU und RAM am Haustier.",
+    "plugin.description": "Zeigt Live-CPU und RAM sowie optionale GPU- und Datenträgermessungen am Haustier.",
     "hud.cpu": "CPU",
     "hud.ram": "RAM",
     "hud.gpu": "GPU",
     "hud.disk": "Datenträger",
+    "metric.cpu": "CPU-Auslastung",
+    "metric.ram": "RAM-Auslastung",
+    "metric.gpu": "GPU-Auslastung",
+    "metric.disk": "Datenträgerkapazität",
+    "metric.battery": "Akku",
+    "battery.charging": "wird geladen",
+    "battery.notCharging": "nicht am Laden",
     "value.na": "—",
     "value.stale": "veraltet",
     "config.showHud.label": "Ressourcen-HUD anzeigen",
     "config.showHud.description": "Zeigt ein kompaktes CPU- und RAM-Overlay am Haustier.",
+    "config.showCpu.label": "CPU anzeigen",
+    "config.showCpu.description": "CPU-Auslastung im angehefteten HUD anzeigen.",
+    "config.showRam.label": "RAM anzeigen",
+    "config.showRam.description": "RAM-Auslastung im angehefteten HUD anzeigen.",
+    "config.showGpu.label": "GPU anzeigen",
+    "config.showGpu.description": "GPU-Auslastung anzeigen, wenn der Host sie liefert.",
+    "config.showDisk.label": "Datenträger anzeigen",
+    "config.showDisk.description": "Belegte Systemvolume-Kapazität anzeigen, wenn der Host sie liefert.",
     "config.pollSeconds.label": "Aktualisierungsintervall (Sekunden)",
     "config.pollSeconds.description": "Wie oft Host-CPU und RAM abgefragt werden.",
     "config.alertPercent.label": "Warnschwelle (%)",
-    "config.alertPercent.description": "Sprechen, wenn eine Anzeige auf oder über diesem Wert bleibt.",
+    "config.alertPercent.description": "Sprechen, wenn eine aktivierte Anzeige diesen Wert erreicht; CPU und GPU erfordern zwei Messungen.",
+    "config.alertCpu.label": "Bei CPU-Auslastung warnen",
+    "config.alertCpu.description": "Vor dem Sprechen zwei aufeinanderfolgende hohe CPU-Messungen verlangen.",
+    "config.alertRam.label": "Bei RAM-Auslastung warnen",
+    "config.alertRam.description": "Bei hoher RAM-Auslastung warnen. Dies misst keinen Speicherdruck.",
+    "config.alertGpu.label": "Bei GPU-Auslastung warnen",
+    "config.alertGpu.description": "Vor dem Sprechen zwei aufeinanderfolgende hohe GPU-Messungen verlangen.",
+    "config.alertDisk.label": "Bei Datenträgerkapazität warnen",
+    "config.alertDisk.description": "Warnen, wenn die belegte Systemvolume-Kapazität die Schwelle erreicht.",
     "config.speakAlerts.label": "Bei hoher Last sprechen",
     "config.speakAlerts.description": "Das Haustier warnt, wenn eine Anzeige die Schwelle überschreitet.",
     "config.language.label": "Sprache",
@@ -161,6 +265,7 @@ export const CATALOGS = {
     "command.snapshot.description": "Das Haustier liest die aktuelle CPU und RAM vor.",
     "speech.snapshot": "CPU {cpu}, RAM {ram}.",
     "speech.snapshotFull": "CPU {cpu}, RAM {ram}, GPU {gpu}, Datenträger {disk}.",
+    "speech.battery": "Akku bei {percent} Prozent ({state}).",
     "speech.stale": "Die letzte gültige Messung ist veraltet.",
     "speech.unavailable": "Ressourcenmessungen sind nicht verfügbar.",
     "speech.alert": "{label} liegt bei {value} Prozent.",
@@ -214,22 +319,28 @@ function metricValue(snapshot, key) {
 }
 
 function hasMetric(snapshot) {
-  return ["cpu", "ram", "gpu", "disk"].some((key) => metricValue(snapshot, key) != null);
+  return METRIC_KEYS.some((key) => metricValue(snapshot, key) != null);
 }
 
 export function hottestMetric(snapshot) {
-  const rows = [
-    ["cpu", metricValue(snapshot, "cpu")],
-    ["ram", metricValue(snapshot, "ram")],
-    ["gpu", metricValue(snapshot, "gpu")],
-    ["disk", metricValue(snapshot, "disk")],
-  ];
   let hottest = null;
-  for (const [key, value] of rows) {
+  for (const key of METRIC_KEYS) {
+    const value = metricValue(snapshot, key);
     if (value == null) continue;
     if (!hottest || value > hottest.value) hottest = { key, value };
   }
   return hottest;
+}
+
+function normalizedBattery(hostMetrics) {
+  const battery = hostMetrics?.battery;
+  const percent = clampPercent(battery?.percent);
+  const charging = typeof battery?.charging === "boolean" ? battery.charging : null;
+  return {
+    batteryPercent: percent,
+    batteryCharging: charging,
+    batteryAvailable: percent != null && charging != null,
+  };
 }
 
 export function mergeSnapshot(hostMetrics = {}, now = Date.now()) {
@@ -237,6 +348,7 @@ export function mergeSnapshot(hostMetrics = {}, now = Date.now()) {
   const ram = clampPercent(hostMetrics.memUsedPercent);
   const gpu = clampPercent(hostMetrics.gpuPercent);
   const disk = clampPercent(hostMetrics.diskUsedPercent);
+  const battery = normalizedBattery(hostMetrics);
   const snapshot = {
     freshness: "fresh",
     cpu,
@@ -244,6 +356,7 @@ export function mergeSnapshot(hostMetrics = {}, now = Date.now()) {
     gpu,
     disk,
     extendedMetricsAvailable: gpu != null || disk != null,
+    ...battery,
     sampledAt: now,
     attemptedAt: now,
   };
@@ -264,6 +377,9 @@ export function unavailableSnapshot(attemptedAt = Date.now()) {
     gpu: null,
     disk: null,
     extendedMetricsAvailable: false,
+    batteryPercent: null,
+    batteryCharging: null,
+    batteryAvailable: false,
     sampledAt: null,
     attemptedAt,
   };
@@ -274,7 +390,15 @@ export function readConfig(raw = {}, hostLocale = "en") {
   const alertPercent = Number(raw.alertPercent ?? DEFAULT_ALERT_PERCENT);
   return {
     showHud: raw.showHud !== false,
+    showCpu: raw.showCpu !== false,
+    showRam: raw.showRam !== false,
+    showGpu: raw.showGpu !== false,
+    showDisk: raw.showDisk !== false,
     speakAlerts: raw.speakAlerts !== false,
+    alertCpu: raw.alertCpu !== false,
+    alertRam: raw.alertRam !== false,
+    alertGpu: raw.alertGpu !== false,
+    alertDisk: raw.alertDisk !== false,
     pollSeconds: Math.max(5, Math.min(60, Number.isFinite(pollSeconds) ? pollSeconds : DEFAULT_POLL_SECONDS)),
     alertPercent: Math.max(70, Math.min(99, Number.isFinite(alertPercent) ? alertPercent : DEFAULT_ALERT_PERCENT)),
     language: resolveLanguage(raw.language ?? DEFAULT_LANGUAGE, hostLocale),
@@ -287,6 +411,8 @@ function snapshotFromStored(value) {
   if (!Number.isFinite(sampledAt)) return null;
   const gpu = clampPercent(value.gpu);
   const disk = clampPercent(value.disk ?? value.ssd);
+  const batteryPercent = clampPercent(value.batteryPercent);
+  const batteryCharging = typeof value.batteryCharging === "boolean" ? value.batteryCharging : null;
   const snapshot = {
     freshness: "stale",
     cpu: clampPercent(value.cpu),
@@ -294,6 +420,9 @@ function snapshotFromStored(value) {
     gpu,
     disk,
     extendedMetricsAvailable: gpu != null || disk != null,
+    batteryPercent,
+    batteryCharging,
+    batteryAvailable: batteryPercent != null && batteryCharging != null,
     sampledAt,
     attemptedAt: Date.now(),
   };
@@ -357,16 +486,15 @@ function hudItem(ctx, language, key, percent, stale) {
   return { icon: ctx.assets.icon(key), value: percent, tone: toneFor(percent), label };
 }
 
-export function hudSpec(ctx, snapshot, language = "en") {
+export function hudSpec(ctx, snapshot, language = "en", config) {
   const visibleSnapshot = snapshotForHud(snapshot);
   if (!visibleSnapshot) return null;
   const stale = visibleSnapshot.freshness === "stale";
-  const items = [
-    hudItem(ctx, language, "cpu", metricValue(visibleSnapshot, "cpu"), stale),
-    hudItem(ctx, language, "ram", metricValue(visibleSnapshot, "ram"), stale),
-    hudItem(ctx, language, "gpu", metricValue(visibleSnapshot, "gpu"), stale),
-    hudItem(ctx, language, "disk", metricValue(visibleSnapshot, "disk"), stale),
-  ].filter(Boolean);
+  const items = METRIC_DEFINITIONS
+    .filter(({ showKey }) => config?.[showKey] !== false)
+    .map(({ key }) => hudItem(ctx, language, key, metricValue(visibleSnapshot, key), stale))
+    .filter(Boolean)
+    .slice(0, 4);
   if (items.length === 0) return null;
   return { tone: "info", sticky: true, pin: true, dismissOn: [], priority: "normal", hud: { items } };
 }
@@ -375,22 +503,27 @@ export function snapshotCopy(language, snapshot, kind) {
   if (!snapshot || snapshot.freshness === "unavailable" || !hasMetric(snapshot)) {
     return t(language, kind === "speech" ? "speech.unavailable" : "status.unavailable");
   }
-  const values = [
-    ["cpu", metricValue(snapshot, "cpu")],
-    ["ram", metricValue(snapshot, "ram")],
-    ["gpu", metricValue(snapshot, "gpu")],
-    ["disk", metricValue(snapshot, "disk")],
-  ];
   const separator = kind === "speech" ? ", " : " · ";
-  const details = values
+  const details = METRIC_KEYS
+    .map((key) => [key, metricValue(snapshot, key)])
     .filter(([, value]) => value != null)
     .map(([key, value]) => `${t(language, `hud.${key}`)} ${formatPercent(language, value)}`)
     .join(separator);
+  const batteryState = snapshot.batteryCharging ? "battery.charging" : "battery.notCharging";
+  const batteryDetails = snapshot.batteryAvailable
+    ? kind === "speech"
+      ? t(language, "speech.battery", {
+        percent: String(snapshot.batteryPercent),
+        state: t(language, batteryState),
+      })
+      : `${t(language, "metric.battery")} ${formatPercent(language, snapshot.batteryPercent)} (${t(language, batteryState)})`
+    : null;
+  const fullDetails = [details, batteryDetails].filter(Boolean).join(separator);
   if (snapshot.freshness === "stale") {
-    if (kind === "speech") return `${details} ${t(language, "speech.stale")}`;
-    return t(language, "status.stale", { details });
+    if (kind === "speech") return `${fullDetails} ${t(language, "speech.stale")}`;
+    return t(language, "status.stale", { details: fullDetails });
   }
-  return kind === "speech" ? `${details}.` : details;
+  return kind === "speech" ? `${fullDetails}.` : fullDetails;
 }
 
 export function resourcesResult(snapshot) {
@@ -400,6 +533,9 @@ export function resourcesResult(snapshot) {
     gpuPercent: metricValue(snapshot, "gpu"),
     diskUsedPercent: metricValue(snapshot, "disk"),
     extendedMetricsAvailable: metricValue(snapshot, "gpu") != null || metricValue(snapshot, "disk") != null,
+    batteryPercent: snapshot?.batteryPercent ?? null,
+    batteryCharging: typeof snapshot?.batteryCharging === "boolean" ? snapshot.batteryCharging : null,
+    batteryAvailable: snapshot?.batteryAvailable === true,
     freshness: snapshot?.freshness ?? "unavailable",
     sampledAt: Number.isFinite(snapshot?.sampledAt) ? snapshot.sampledAt : null,
   };
@@ -434,7 +570,7 @@ function isInactiveBubbleError(error) {
 
 async function updateHudForState(state, snapshot, generation) {
   if (!isCurrent(state, generation) || !effectiveVisibility(state) || state.hudSuppressed) return;
-  const spec = hudSpec(state.ctx, snapshot, state.config.language);
+  const spec = hudSpec(state.ctx, snapshot, state.config.language, state.config);
   if (!spec) {
     await dismissPinned(state);
     return;
@@ -495,27 +631,67 @@ async function publishStatusForState(state, snapshot, generation) {
   }
 }
 
+function alertCandidates(snapshot, config, alertStreaks = {}) {
+  if (snapshot?.freshness !== "fresh") return [];
+  return METRIC_DEFINITIONS
+    .map((definition) => ({
+      ...definition,
+      value: metricValue(snapshot, definition.key),
+      enabled: config?.[definition.alertKey] !== false,
+      streak: alertStreaks[definition.key] ?? 0,
+    }))
+    .filter(({ value, enabled }) => enabled && value != null && value >= config.alertPercent)
+    .filter(({ sustained, streak }) => !sustained || streak >= SUSTAINED_ALERT_SAMPLES)
+    .sort((left, right) => right.value - left.value);
+}
+
+function updateAlertStreaks(state, snapshot) {
+  for (const definition of METRIC_DEFINITIONS) {
+    if (!definition.sustained) {
+      state.alertStreaks[definition.key] = 0;
+      continue;
+    }
+    const value = metricValue(snapshot, definition.key);
+    const sustained = snapshot?.freshness === "fresh"
+      && state.config[definition.alertKey] !== false
+      && value != null
+      && value >= state.config.alertPercent;
+    state.alertStreaks[definition.key] = sustained
+      ? Math.min(SUSTAINED_ALERT_SAMPLES, state.alertStreaks[definition.key] + 1)
+      : 0;
+  }
+}
+
+function resetAlertStreaks(state) {
+  for (const key of METRIC_KEYS) state.alertStreaks[key] = 0;
+}
+
+function alertLabel(language, key) {
+  return t(language, `metric.${key}`);
+}
+
 export async function maybeAlert(ctx, snapshot, now = Date.now(), cfg) {
-  const settings = cfg ?? readConfig((await ctx.config.get()) ?? {}, ctx.locale);
-  if (snapshot?.freshness !== "fresh" || !settings.speakAlerts) return null;
-  const hottest = hottestMetric(snapshot);
-  if (!hottest || hottest.value < settings.alertPercent) return null;
+  const rawConfig = cfg ?? (await ctx.config.get()) ?? {};
+  const settings = readConfig(rawConfig, ctx.locale);
+  if (!settings.speakAlerts) return null;
+  const candidate = alertCandidates(snapshot, settings, cfg?.alertStreaks)[0];
+  if (!candidate) return null;
   try {
     await ctx.pet.react("error", { showMessage: false });
     await ctx.pet.speak(t(settings.language, "speech.alert", {
-      label: t(settings.language, `hud.${hottest.key}`),
-      value: String(hottest.value),
+      label: alertLabel(settings.language, candidate.key),
+      value: String(candidate.value),
     }));
   } catch {
     // The lifecycle controller logs this failure. Keep this helper compatible.
   }
-  return hottest;
+  return { key: candidate.key, value: candidate.value };
 }
 
 async function maybeAlertForState(state, snapshot, now, generation) {
   if (!isCurrent(state, generation) || snapshot?.freshness !== "fresh" || !state.config.speakAlerts) return null;
-  const hottest = hottestMetric(snapshot);
-  if (!hottest || hottest.value < state.config.alertPercent) return null;
+  const candidate = alertCandidates(snapshot, state.config, state.alertStreaks)[0];
+  if (!candidate) return null;
   if (now - state.lastAlertAt < ALERT_COOLDOWN_MS) return null;
 
   state.lastAlertAt = now;
@@ -529,13 +705,13 @@ async function maybeAlertForState(state, snapshot, now, generation) {
   if (!isCurrent(state, generation)) return null;
   try {
     await state.ctx.pet.speak(t(state.config.language, "speech.alert", {
-      label: t(state.config.language, `hud.${hottest.key}`),
-      value: String(hottest.value),
+      label: alertLabel(state.config.language, candidate.key),
+      value: String(candidate.value),
     }));
   } catch (error) {
     await warn(state, "system resources alert speech failed", error);
   }
-  return hottest;
+  return { key: candidate.key, value: candidate.value };
 }
 
 async function sampleMetrics(state, now) {
@@ -553,6 +729,7 @@ async function executePoll(state, purposes, generation, requestedAt) {
   if (!isCurrent(state, generation)) return snapshot;
 
   state.currentSnapshot = snapshot;
+  updateAlertStreaks(state, snapshot);
   if (snapshot.freshness === "fresh") {
     state.lastFreshSnapshot = snapshot;
     await storageSet(state, "snapshot", snapshot);
@@ -655,8 +832,15 @@ async function handleConfigChange(state, raw) {
   if (!state.active) return;
   const next = readConfig(raw ?? {}, state.ctx.locale);
   const visibilityChanged = next.showHud !== state.config.showHud;
+  const alertSettingsChanged = next.alertPercent !== state.config.alertPercent
+    || next.alertCpu !== state.config.alertCpu
+    || next.alertRam !== state.config.alertRam
+    || next.alertGpu !== state.config.alertGpu
+    || next.alertDisk !== state.config.alertDisk
+    || next.speakAlerts !== state.config.speakAlerts;
   state.config = next;
   state.generation += 1;
+  if (alertSettingsChanged) resetAlertStreaks(state);
   if (visibilityChanged) {
     state.hudVisible = next.showHud;
     state.visibilitySource = "config";
@@ -770,6 +954,7 @@ export function register(OpenPetsPlugin) {
         currentSnapshot: null,
         lastFreshSnapshot: null,
         lastAlertAt: 0,
+        alertStreaks: { cpu: 0, ram: 0, gpu: 0, disk: 0 },
         unsubscribeConfig: null,
         unsubscribeClick: null,
         assistantRegistered: false,
@@ -807,7 +992,7 @@ export function register(OpenPetsPlugin) {
           await ctx.assistant.registerCapability(
             {
               id: "resources.get",
-              description: "Read current CPU and RAM usage percents plus GPU and disk usage when the OpenPets host supports them.",
+              description: "Read current CPU and RAM usage, optional GPU and disk capacity, and battery state when the OpenPets host supports them.",
               inputSchema: { type: "object", properties: {}, additionalProperties: false },
             },
             async () => resourcesResult(await requestPoll(state, "capability")),

@@ -1,10 +1,10 @@
 {
   "name": "openpets-system-resources",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "OpenPets plugin: live CPU, RAM, and optional host-provided GPU and system-volume metrics to the left of the pet.",
+  "description": "OpenPets plugin: live CPU, RAM, and optional host-provided GPU and system-volume metrics on the existing pet.",
   "scripts": {
     "test": "node test.js && node scripts/package-catalog.test.js",
     "package:catalog": "node scripts/package-catalog.mjs"
