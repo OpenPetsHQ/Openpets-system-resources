@@ -3,7 +3,7 @@
 ## 2.1.0
 
 - Added independent CPU, RAM, GPU, and Disk HUD switches with on defaults and host-config persistence.
-- Added independent alert switches. CPU and GPU alerts require two consecutive fresh threshold readings.
+- Added independent alert switches. CPU and GPU alerts require two consecutive fresh threshold readings from scheduled monitoring polls; assistant and UI requests do not advance the streak.
 - Kept RAM alerts explicit about usage rather than memory pressure, and kept Disk alerts about used system-volume capacity.
 - Preserved optional SDK battery data in snapshots and `resources.get` when a host supplies it. Current OpenPets desktop builds do not provide it.
 - Documented that network throughput is not exposed by the current SDK.

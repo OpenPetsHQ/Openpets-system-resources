@@ -729,7 +729,12 @@ async function executePoll(state, purposes, generation, requestedAt) {
   if (!isCurrent(state, generation)) return snapshot;
 
   state.currentSnapshot = snapshot;
-  updateAlertStreaks(state, snapshot);
+  // The SDK exposes metric values but no sample identity. The desktop host
+  // refreshes CPU/RAM on each metrics() call and caches only extended GPU/disk
+  // readings, so the scheduled poll is the supported monitoring-sample
+  // boundary. Assistant and UI requests may read the same host state, but
+  // must not manufacture sustained CPU/GPU samples.
+  if (purposes.has("scheduled")) updateAlertStreaks(state, snapshot);
   if (snapshot.freshness === "fresh") {
     state.lastFreshSnapshot = snapshot;
     await storageSet(state, "snapshot", snapshot);

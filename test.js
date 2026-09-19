@@ -393,14 +393,67 @@ async function runCapability(h, id) {
   const base = Date.now();
   assert.equal(h.calls.react.length, 0, "a single CPU spike does not alert");
   await tick(h.ctx, base + 1_000);
+  assert.equal(h.calls.react.length, 0, "one scheduled high sample does not alert");
+  await tick(h.ctx, base + 2_000);
   const firstAlertCount = h.calls.react.length;
-  assert.equal(firstAlertCount, 1, "CPU alerts after two sustained threshold samples");
+  assert.equal(firstAlertCount, 1, "CPU alerts after two consecutive scheduled samples");
   h.system.setMetrics({ cpuPercent: 97, memUsedPercent: 40 });
   await tick(h.ctx, base + 60_000);
   assert.equal(h.calls.react.length, firstAlertCount, "alert cooldown suppresses repeated alerts");
-  await tick(h.ctx, base + ALERT_COOLDOWN_MS + 1_000);
+  await tick(h.ctx, base + ALERT_COOLDOWN_MS + 3_000);
   assert.equal(h.calls.react.length, firstAlertCount + 1, "alert cooldown expires normally");
   await h.stop();
+}
+
+{
+  const interactions = [
+    ["resources.get", async (h) => {
+      await runCapability(h, "resources.get");
+      await runCapability(h, "resources.get");
+      await h.runCommand("show");
+    }],
+    ["Show", async (h) => {
+      await h.runCommand("show");
+    }],
+    ["display-setting changes", async (h) => {
+      await h.setConfig({
+        showHud: true,
+        showCpu: false,
+        showRam: true,
+        showGpu: true,
+        showDisk: true,
+        alertPercent: 90,
+        alertCpu: true,
+        alertRam: false,
+        alertGpu: true,
+        alertDisk: false,
+      });
+      await h.setConfig({
+        showHud: true,
+        showCpu: true,
+        showRam: true,
+        showGpu: true,
+        showDisk: true,
+        alertPercent: 90,
+        alertCpu: true,
+        alertRam: false,
+        alertGpu: true,
+        alertDisk: false,
+      });
+    }],
+  ];
+  for (const [label, interact] of interactions) {
+    const h = makeHarness({
+      nowMs: 10_250_000,
+      config: { alertPercent: 90, alertCpu: true, alertRam: false, alertGpu: true, alertDisk: false },
+    });
+    h.system.setMetrics({ cpuPercent: 96, memUsedPercent: 40, gpuPercent: 96 });
+    await h.start();
+    const alertsBeforeInteraction = h.calls.react.length;
+    await interact(h);
+    assert.equal(h.calls.react.length, alertsBeforeInteraction, `${label} cannot manufacture a sustained CPU/GPU alert`);
+    await h.stop();
+  }
 }
 
 {
@@ -420,7 +473,9 @@ async function runCapability(h, id) {
   await h.start();
   assert.equal(h.calls.react.length, 0, "disabled alert metrics stay silent");
   await tick(h.ctx, Date.now() + 1_000);
-  assert.equal(h.calls.react.length, 1, "GPU alerts after sustained usage when enabled");
+  assert.equal(h.calls.react.length, 0, "one scheduled GPU sample is not sustained");
+  await tick(h.ctx, Date.now() + 2_000);
+  assert.equal(h.calls.react.length, 1, "GPU alerts after consecutive scheduled samples");
   h.system.setMetrics({ cpuPercent: 10, memUsedPercent: 20, gpuPercent: 20 });
   await tick(h.ctx, Date.now() + 2_000);
   h.system.setMetrics({ cpuPercent: 10, memUsedPercent: 20, gpuPercent: 95 });

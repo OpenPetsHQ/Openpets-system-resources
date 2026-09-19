@@ -55,7 +55,9 @@ at least one indicator to display it again.
 The four display switches map directly to the host's four-item HUD limit.
 
 Alerts have independent switches for CPU, RAM, GPU, and Disk. CPU and GPU
-alerts require two consecutive fresh readings at or above the threshold. RAM
+alerts require two consecutive fresh readings from scheduled monitoring polls
+at or above the threshold. Assistant queries, Show, and display-setting
+changes may refresh the HUD but never advance that sustained counter. RAM
 alerts describe RAM usage, not memory pressure, because the SDK exposes no
 memory-pressure reading. Disk alerts describe used system-volume capacity.
 Missing, unavailable, and stale readings never alert. The existing cooldown is
