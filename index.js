@@ -5,6 +5,7 @@ export const ALERT_COOLDOWN_MS = 10 * 60_000;
 export const DEFAULT_POLL_SECONDS = 10;
 export const DEFAULT_ALERT_PERCENT = 90;
 export const DEFAULT_LANGUAGE = "auto";
+const MAX_SCHEDULE_REGISTRATION_ATTEMPTS = 2;
 
 export const CATALOGS = {
   en: {
@@ -189,6 +190,7 @@ export function t(language, key, vars) {
 }
 
 export function clampPercent(value) {
+  if (value == null) return null;
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n)) return null;
   return Math.max(0, Math.min(100, Math.round(n)));
@@ -450,6 +452,7 @@ async function updateHudForState(state, snapshot, generation) {
   try {
     bubble = await state.ctx.ui.bubble(spec);
   } catch (error) {
+    state.hudSuppressed = true;
     await warn(state, "system resources HUD creation failed", error);
     return;
   }
@@ -457,12 +460,12 @@ async function updateHudForState(state, snapshot, generation) {
     await dismissHandle(state, bubble);
     return;
   }
+  state.pinned = bubble;
   bubble.onDismiss((reason) => {
     if (state.pinned?.id !== bubble.id) return;
     state.pinned = null;
     if (reason === "replaced") state.hudSuppressed = true;
   });
-  state.pinned = bubble;
 }
 
 export async function publishStatus(ctx, snapshot, language = "en") {
@@ -591,17 +594,23 @@ async function reconcileScheduleNow(state) {
     await warn(state, "system resources schedule cancellation failed", error);
   }
   if (!state.active || scheduleGeneration !== state.scheduleGeneration) return;
-  try {
-    await state.ctx.schedule.once(SCHEDULE_ID, state.config.pollSeconds * 1000, async () => {
-      if (!state.active || scheduleGeneration !== state.scheduleGeneration) return;
-      state.scheduleArmed = false;
-      await requestPoll(state, "scheduled");
-      if (state.active && scheduleGeneration === state.scheduleGeneration) await queueSchedule(state);
-    });
-    if (state.active && scheduleGeneration === state.scheduleGeneration) state.scheduleArmed = true;
-  } catch (error) {
-    await warn(state, "system resources schedule registration failed", error);
+  let lastError;
+  for (let attempt = 1; attempt <= MAX_SCHEDULE_REGISTRATION_ATTEMPTS; attempt += 1) {
+    if (!state.active || scheduleGeneration !== state.scheduleGeneration) return;
+    try {
+      await state.ctx.schedule.once(SCHEDULE_ID, state.config.pollSeconds * 1000, async () => {
+        if (!state.active || scheduleGeneration !== state.scheduleGeneration) return;
+        state.scheduleArmed = false;
+        await requestPoll(state, "scheduled");
+        if (state.active && scheduleGeneration === state.scheduleGeneration) await queueSchedule(state);
+      });
+      if (state.active && scheduleGeneration === state.scheduleGeneration) state.scheduleArmed = true;
+      return;
+    } catch (error) {
+      lastError = error;
+    }
   }
+  await warn(state, "system resources schedule registration failed after bounded retry", lastError);
 }
 
 function queueSchedule(state) {

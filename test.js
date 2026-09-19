@@ -41,6 +41,8 @@ assert.equal(CATALOGS.de["speech.alert"].replace("{label}", "CPU").replace("{val
 
 assert.equal(clampPercent(12.4), 12);
 assert.equal(clampPercent(0), 0);
+assert.equal(clampPercent(null), null);
+assert.equal(clampPercent(undefined), null);
 assert.equal(clampPercent(140), 100);
 assert.equal(clampPercent("nope"), null);
 assert.equal(toneFor(40), "green");
@@ -58,7 +60,23 @@ assert.equal(merged.extendedMetricsAvailable, true);
 assert.equal(hottestMetric(merged).key, "ram");
 assert.equal(staleSnapshot(merged, 999).sampledAt, 1234);
 assert.equal(staleSnapshot(merged, 999).freshness, "stale");
-assert.equal(mergeSnapshot({}, 1234).freshness, "unavailable");
+const unavailable = mergeSnapshot({ cpuPercent: null, memUsedPercent: undefined, gpuPercent: null, diskUsedPercent: undefined }, 1234);
+assert.equal(unavailable.freshness, "unavailable");
+assert.deepEqual(unavailable, {
+  freshness: "unavailable",
+  cpu: null,
+  ram: null,
+  gpu: null,
+  disk: null,
+  extendedMetricsAvailable: false,
+  sampledAt: 1234,
+  attemptedAt: 1234,
+});
+assert.equal(mergeSnapshot({}, 1234).cpu, null, "missing CPU stays unavailable");
+assert.equal(mergeSnapshot({}, 1234).ram, null, "missing RAM stays unavailable");
+const genuineZeros = mergeSnapshot({ cpuPercent: 0, memUsedPercent: 0, gpuPercent: 0, diskUsedPercent: 0 }, 1234);
+assert.equal(genuineZeros.freshness, "fresh");
+assert.deepEqual([genuineZeros.cpu, genuineZeros.ram, genuineZeros.gpu, genuineZeros.disk], [0, 0, 0, 0]);
 
 const cfg = readConfig({ pollSeconds: 3, alertPercent: 140, showHud: false });
 assert.equal(cfg.pollSeconds, 5);
@@ -157,6 +175,29 @@ async function runCapability(h, id) {
   assert.equal(h.calls.bubbles.length, countAfterStart, "a replaced pinned slot is not repeatedly re-evicted");
   await h.runCommand("show");
   assert.ok(h.calls.bubbles.length > countAfterStart, "explicit Show can restore a HUD after another plugin replaced it");
+  await h.stop();
+}
+
+{
+  const h = makeHarness({ nowMs: 3_600_000 });
+  h.calls.storage.set("snapshot", {
+    freshness: "fresh",
+    cpu: null,
+    ram: 0,
+    gpu: null,
+    disk: undefined,
+    sampledAt: 3_500_000,
+  });
+  h.ctx.system.metrics = async () => { throw new Error("temporary metrics outage"); };
+  await h.start();
+  const restoredItems = h.calls.bubbles.at(-1).spec.hud.items;
+  assert.deepEqual(restoredItems.map((item) => item.icon.name), ["ram"]);
+  assert.equal(restoredItems[0].value, 0, "restored genuine zero remains zero");
+  const restored = await runCapability(h, "resources.get");
+  assert.equal(restored.cpuPercent, null, "restored explicit null remains null");
+  assert.equal(restored.ramPercent, 0, "restored zero remains zero");
+  assert.equal(restored.gpuPercent, null, "restored missing GPU remains null");
+  assert.equal(restored.diskUsedPercent, null, "restored missing disk remains null");
   await h.stop();
 }
 
@@ -306,6 +347,74 @@ async function runCapability(h, id) {
   await h.setConfig({ pollSeconds: 5 });
   assert.equal(h.calls.schedules.size, 0, "failed scheduling does not leave an untracked operation");
   h.ctx.schedule.once = originalOnce;
+  await h.stop();
+}
+
+{
+  const h = makeHarness({ nowMs: 11_500_000 });
+  const originalOnce = h.ctx.schedule.once;
+  let scheduleAttempts = 0;
+  h.ctx.schedule.once = async (...args) => {
+    scheduleAttempts += 1;
+    if (scheduleAttempts === 1) throw new Error("temporary scheduler outage");
+    return originalOnce(...args);
+  };
+  await h.start();
+  assert.equal(scheduleAttempts, 2, "schedule registration retries once after a failure");
+  assert.equal(h.calls.schedules.size, 1, "recovered registration leaves one active schedule");
+  await h.stop();
+}
+
+{
+  const h = makeHarness({ nowMs: 11_600_000 });
+  const originalOnce = h.ctx.schedule.once;
+  let schedulerAvailable = false;
+  let scheduleAttempts = 0;
+  h.ctx.schedule.once = async (...args) => {
+    scheduleAttempts += 1;
+    if (!schedulerAvailable) throw new Error("host scheduler unavailable");
+    return originalOnce(...args);
+  };
+  await h.start();
+  assert.equal(scheduleAttempts, 2, "persistent scheduler failure is bounded");
+  assert.equal(h.calls.schedules.size, 0, "failed registration leaves no schedule");
+  await tick(h.ctx, Date.now() + 5_000);
+  assert.equal(scheduleAttempts, 2, "polling does not create an uncontrolled retry loop");
+  schedulerAvailable = true;
+  await h.setConfig({ pollSeconds: 5 });
+  assert.equal(scheduleAttempts, 3, "a later configuration change retries registration");
+  assert.equal(h.calls.schedules.size, 1, "configuration recovery arms one schedule");
+  await h.stop();
+}
+
+{
+  const h = makeHarness({ nowMs: 11_700_000 });
+  const hostBubble = h.ctx.ui.bubble;
+  let bubbleAttempts = 0;
+  let higherPriorityOwner = true;
+  h.ctx.ui.bubble = async (spec) => {
+    bubbleAttempts += 1;
+    if (!higherPriorityOwner) return hostBubble(spec);
+    return {
+      id: `rejected-pinned-${bubbleAttempts}`,
+      update: async () => undefined,
+      dismiss: async () => undefined,
+      pin: async () => undefined,
+      unpin: async () => undefined,
+      onAction: () => undefined,
+      onSubmit: () => undefined,
+      // The host arbiter can synchronously reject a lower-priority pin while
+      // the plugin is subscribing to the handle's dismissal callback.
+      onDismiss: (handler) => handler("replaced"),
+    };
+  };
+  await h.start();
+  await tick(h.ctx, Date.now() + 5_000);
+  assert.equal(bubbleAttempts, 1, "a higher-priority pinned owner is not reclaimed on every poll");
+  higherPriorityOwner = false;
+  await h.runCommand("show");
+  assert.equal(bubbleAttempts, 2, "explicit Show can retry after the pinned slot is available");
+  assert.equal(h.calls.bubbles.at(-1).petId, "default");
   await h.stop();
 }
 
