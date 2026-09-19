@@ -397,24 +397,40 @@ async function runCapability(h, id) {
     if (!higherPriorityOwner) return hostBubble(spec);
     return {
       id: `rejected-pinned-${bubbleAttempts}`,
-      update: async () => undefined,
+      // The arbiter has already dismissed this entry before the SDK bridge
+      // returns its public handle. The later bridge update therefore rejects.
+      update: async () => { throw new Error("Plugin bubble is no longer live."); },
       dismiss: async () => undefined,
       pin: async () => undefined,
       unpin: async () => undefined,
       onAction: () => undefined,
       onSubmit: () => undefined,
-      // The host arbiter can synchronously reject a lower-priority pin while
-      // the plugin is subscribing to the handle's dismissal callback.
-      onDismiss: (handler) => handler("replaced"),
+      // The bridge's bubbleSubscribe sees no live slot and the preload
+      // silently ignores its { ok: false } response.
+      onDismiss: () => undefined,
     };
   };
   await h.start();
   await tick(h.ctx, Date.now() + 5_000);
   assert.equal(bubbleAttempts, 1, "a higher-priority pinned owner is not reclaimed on every poll");
+  await tick(h.ctx, Date.now() + 10_000);
+  assert.equal(bubbleAttempts, 1, "an inactive handle remains suppressed on later polls");
   higherPriorityOwner = false;
   await h.runCommand("show");
   assert.equal(bubbleAttempts, 2, "explicit Show can retry after the pinned slot is available");
   assert.equal(h.calls.bubbles.at(-1).petId, "default");
+  await h.stop();
+}
+
+{
+  const h = makeHarness({ nowMs: 11_800_000 });
+  await h.start();
+  const firstBubble = h.calls.bubbles.at(-1);
+  firstBubble.handle.update = async () => { throw new Error("temporary host update outage"); };
+  await tick(h.ctx, Date.now() + 5_000);
+  assert.equal(h.calls.bubbles.length, 2, "recoverable update failures can recreate the HUD");
+  await tick(h.ctx, Date.now() + 10_000);
+  assert.equal(h.calls.bubbles.length, 2, "a recovered HUD is updated in place");
   await h.stop();
 }
 

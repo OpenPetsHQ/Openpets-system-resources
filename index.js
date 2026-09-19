@@ -6,6 +6,7 @@ export const DEFAULT_POLL_SECONDS = 10;
 export const DEFAULT_ALERT_PERCENT = 90;
 export const DEFAULT_LANGUAGE = "auto";
 const MAX_SCHEDULE_REGISTRATION_ATTEMPTS = 2;
+const INACTIVE_BUBBLE_ERROR = "Plugin bubble is no longer live.";
 
 export const CATALOGS = {
   en: {
@@ -427,6 +428,10 @@ async function dismissPinned(state) {
   await dismissHandle(state, pinned);
 }
 
+function isInactiveBubbleError(error) {
+  return error instanceof Error && error.message === INACTIVE_BUBBLE_ERROR;
+}
+
 async function updateHudForState(state, snapshot, generation) {
   if (!isCurrent(state, generation) || !effectiveVisibility(state) || state.hudSuppressed) return;
   const spec = hudSpec(state.ctx, snapshot, state.config.language);
@@ -442,7 +447,12 @@ async function updateHudForState(state, snapshot, generation) {
       if (!isCurrent(state, generation) || !effectiveVisibility(state) || state.hudSuppressed || state.pinned !== pinned) return;
       return;
     } catch (error) {
-      if (state.pinned === pinned) state.pinned = null;
+      const wasCurrentPinned = state.pinned === pinned;
+      if (wasCurrentPinned) state.pinned = null;
+      if (wasCurrentPinned && isInactiveBubbleError(error)) {
+        state.hudSuppressed = true;
+        return;
+      }
       await warn(state, "system resources HUD update failed", error);
     }
   }
