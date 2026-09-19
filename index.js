@@ -967,6 +967,11 @@ async function setHudVisibility(state, visible) {
   return requestPoll(state, "show");
 }
 
+async function setHudVisibilityForAssistant(state, visible) {
+  await setHudVisibility(state, visible);
+  return { ok: true, visible: state.hudVisible };
+}
+
 async function handleConfigChange(state, raw) {
   if (!state.active) return;
   const next = readConfig(raw ?? {}, state.ctx.locale);
@@ -1101,7 +1106,7 @@ export function register(OpenPetsPlugin) {
         lastGpuSampledAt: null,
         unsubscribeConfig: null,
         unsubscribeClick: null,
-        assistantRegistered: false,
+        assistantCapabilityIds: [],
       };
       activeLifecycle = state;
       await readInitialState(state);
@@ -1132,18 +1137,39 @@ export function register(OpenPetsPlugin) {
       }
 
       if (ctx.assistant?.registerCapability) {
-        try {
-          await ctx.assistant.registerCapability(
+        const assistantCapabilities = [
+          [
             {
               id: "resources.get",
               description: "Read current CPU and RAM usage, optional GPU and disk capacity, battery state, and network throughput when the OpenPets host supports them.",
               inputSchema: { type: "object", properties: {}, additionalProperties: false },
             },
             async () => resourcesResult(await requestPoll(state, "capability")),
-          );
-          state.assistantRegistered = true;
-        } catch (error) {
-          await warn(state, "system resources assistant capability registration failed", error);
+          ],
+          [
+            {
+              id: "resources.show",
+              description: "Show the System Resources HUD on the pet.",
+              inputSchema: { type: "object", properties: {}, additionalProperties: false },
+            },
+            async () => setHudVisibilityForAssistant(state, true),
+          ],
+          [
+            {
+              id: "resources.hide",
+              description: "Hide the System Resources HUD on the pet.",
+              inputSchema: { type: "object", properties: {}, additionalProperties: false },
+            },
+            async () => setHudVisibilityForAssistant(state, false),
+          ],
+        ];
+        for (const [capability, handler] of assistantCapabilities) {
+          try {
+            await ctx.assistant.registerCapability(capability, handler);
+            state.assistantCapabilityIds.push(capability.id);
+          } catch (error) {
+            await warn(state, `system resources assistant capability registration failed: ${capability.id}`, error);
+          }
         }
       }
 
@@ -1170,13 +1196,14 @@ async function stopLifecycle(state) {
     try { state.unsubscribeClick(); } catch (error) { await warn(state, "system resources click unsubscribe failed", error); }
     state.unsubscribeClick = null;
   }
-  if (state.assistantRegistered && state.ctx.assistant?.unregisterCapability) {
-    try {
-      await state.ctx.assistant.unregisterCapability("resources.get");
-    } catch (error) {
-      await warn(state, "system resources assistant capability cleanup failed", error);
+  if (state.ctx.assistant?.unregisterCapability) {
+    for (const id of state.assistantCapabilityIds.splice(0).reverse()) {
+      try {
+        await state.ctx.assistant.unregisterCapability(id);
+      } catch (error) {
+        await warn(state, `system resources assistant capability cleanup failed: ${id}`, error);
+      }
     }
-    state.assistantRegistered = false;
   }
   try {
     await state.ctx.schedule.cancel(SCHEDULE_ID);

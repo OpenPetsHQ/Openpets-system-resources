@@ -235,6 +235,17 @@ async function runCapability(h, id) {
 }
 
 {
+  const h = makeHarness({ nowMs: 3_100_000, config: { showHud: false } });
+  await h.start();
+  assert.deepEqual(await runCapability(h, "resources.show"), { ok: true, visible: true });
+  assert.equal(h.calls.bubbles.at(-1).petId, "default", "assistant Show uses the existing default pet");
+  assert.deepEqual(await runCapability(h, "resources.hide"), { ok: true, visible: false });
+  assert.equal(h.calls.bubbles.at(-1).dismissed, true, "assistant Hide dismisses the existing HUD");
+  assert.equal(h.calls.storage.get("hudVisible"), false, "assistant visibility changes use the existing persisted visibility");
+  await h.stop();
+}
+
+{
   const h = makeHarness({
     nowMs: 3_250_000,
     config: { showCpu: false, showRam: true, showGpu: true, showDisk: false },

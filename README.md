@@ -34,6 +34,11 @@ replace another normal-priority bubble according to its arbiter.
 - Show / hide resource HUD
 - Read resources (or click the pet)
 
+Assistant capabilities expose the same controls as `resources.get`,
+`resources.show`, and `resources.hide`. The visibility capabilities return a
+concise `{ ok, visible }` result and persist the same visibility state as the
+commands.
+
 The Show and Hide commands persist their current visibility choice. **Show
 resource HUD** is an explicit override: it displays the HUD even when the
 `Show resource HUD` setting is off and that choice survives a restart. A later
