@@ -10,6 +10,8 @@ assert.ok(files.includes("index.js"));
 assert.ok(files.includes("LICENSE"));
 assert.ok(files.includes("locales/en.json"));
 assert.ok(files.includes("assets/cpu.svg"));
+assert.ok(files.includes("assets/disk.svg"));
+assert.ok(!files.includes("assets/ssd.svg"));
 assert.ok(!files.includes("package.json"));
 assert.ok(!files.some((file) => file.startsWith("scripts/") || file.startsWith("sidecar/")));
 assertCatalogAllowlist(files);

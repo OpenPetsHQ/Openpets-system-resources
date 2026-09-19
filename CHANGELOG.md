@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.0
+
+- Replaced the satellite pet with the host-rendered pinned HUD on the existing default pet.
+- Removed satellite-only movement, animation, pet-management, and pet-list permissions.
+- Made Show and Hide visibility durable across polling, configuration changes, and restarts.
+- Serialized metric polling, guarded late asynchronous work, and made shutdown cancel cleanly.
+- Display GPU and disk independently, preserve genuine zero values, and mark cached readings stale after collection failures.
+- Renamed the user-facing SSD label to Disk or its locale equivalent while preserving `resources.get` response field names.
+
 ## 1.5.0
 
 - Read optional aggregate GPU and system-volume usage directly from OpenPets `system:metrics` when the host supports them.
