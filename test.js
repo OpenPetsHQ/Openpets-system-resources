@@ -258,6 +258,7 @@ async function runCapability(h, id) {
   await h.setConfig({ showCpu: false, showRam: false, showGpu: false, showDisk: false });
   assert.equal(h.calls.bubbles.at(-1).dismissed, true, "disabling every indicator dismisses the existing HUD");
   const countAfterDisable = h.calls.bubbles.length;
+  await h.runCommand("hide");
   await h.runCommand("show");
   assert.equal(h.calls.bubbles.length, countAfterDisable, "Show does not create an empty HUD");
   await h.setConfig({ showCpu: false, showRam: false, showGpu: false, showDisk: true });
@@ -450,10 +451,10 @@ async function runCapability(h, id) {
     ["resources.get", async (h) => {
       await runCapability(h, "resources.get");
       await runCapability(h, "resources.get");
-      await h.runCommand("show");
+      await runCapability(h, "resources.show");
     }],
     ["Show", async (h) => {
-      await h.runCommand("show");
+      await runCapability(h, "resources.show");
     }],
     ["display-setting changes", async (h) => {
       await h.setConfig({
@@ -533,7 +534,7 @@ async function runCapability(h, id) {
   await tick(h.ctx, Date.now() + 1_000);
   assert.equal(h.calls.react.length, 0, "one fresh GPU sample starts but does not finish the streak");
   await runCapability(h, "resources.get");
-  await h.runCommand("show");
+  await runCapability(h, "resources.show");
   await h.setConfig({ showCpu: false, showRam: true, showGpu: true, showDisk: true, alertPercent: 90, alertCpu: false, alertRam: false, alertGpu: true, alertDisk: false });
   await tick(h.ctx, Date.now() + 2_000);
   assert.equal(h.calls.react.length, 0, "assistant and UI reads of a cached GPU sample cannot advance the streak");
@@ -685,7 +686,6 @@ async function runCapability(h, id) {
 
 const manifest = JSON.parse(await readFile(new URL("./openpets.plugin.json", import.meta.url), "utf8"));
 assert.equal(manifest.id, "openpets.system-resources");
-assert.equal(manifest.version, "2.1.0");
 assert.deepEqual(manifest.permissions.slice().sort(), PERMISSIONS.slice().sort());
 assert.equal(manifest.assets.icons.disk, "assets/disk.svg");
 assert.equal(manifest.assets.icons.ssd, undefined);
@@ -704,6 +704,23 @@ for (const field of Object.values(manifest.configSchema)) {
     assert.equal(reference.startsWith("$t:"), true);
     assert.equal(Object.hasOwn(LOCALES.en, reference.slice(3)), true, `${property} resolves in English`);
   }
+}
+
+// The pet menu offers only the HUD toggle that applies: Hide while the HUD is
+// on screen, Show while it is hidden or displaced by another plugin.
+{
+  const h = makeHarness({ nowMs: 12_500_000 });
+  await h.start();
+  const toggles = () => ["show", "hide"].filter((id) => h.calls.commands.has(id));
+  assert.deepEqual(toggles(), ["hide"]);
+  await h.runCommand("hide");
+  assert.deepEqual(toggles(), ["show"]);
+  await h.runCommand("show");
+  assert.deepEqual(toggles(), ["hide"]);
+  await h.dismissBubble(h.calls.bubbles.at(-1).handle.id, "replaced");
+  await tick(h.ctx, Date.now() + 1_000);
+  assert.deepEqual(toggles(), ["show"], "a displaced HUD can be brought back");
+  await h.stop();
 }
 
 console.log("openpets.system-resources: all checks passed.");

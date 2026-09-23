@@ -687,6 +687,47 @@ async function probeBubbleLiveness(state, bubble, priority) {
   }
 }
 
+function setHudSuppressed(state, suppressed) {
+  state.hudSuppressed = suppressed;
+  void syncHudCommand(state);
+}
+
+/**
+ * Offer only the HUD toggle that applies: "Hide" while the HUD is on screen,
+ * "Show" while it is hidden or was displaced by another plugin. Updates are
+ * chained so concurrent state changes cannot leave both commands registered;
+ * each step reports its own failure, so the chain never rejects.
+ */
+function syncHudCommand(state) {
+  const next = state.hudCommandSync.then(() => applyHudCommand(state));
+  state.hudCommandSync = next;
+  return next;
+}
+
+async function applyHudCommand(state) {
+  if (!state.active) return;
+  const shown = effectiveVisibility(state) && !state.hudSuppressed;
+  const id = shown ? "hide" : "show";
+  if (state.hudCommandId === id) return;
+
+  const ctx = state.ctx;
+  try {
+    await ctx.commands.unregister(shown ? "show" : "hide");
+    await ctx.commands.register(
+      {
+        id,
+        title: `$t:command.${id}.title`,
+        description: `$t:command.${id}.description`,
+        icon: ctx.assets.icon("system-resources"),
+      },
+      () => setHudVisibility(state, !shown),
+    );
+    state.hudCommandId = id;
+  } catch (error) {
+    await warn(state, `system resources command registration failed: ${id}`, error);
+  }
+}
+
 async function updateHudForState(state, snapshot, generation) {
   if (!isCurrent(state, generation) || !effectiveVisibility(state) || state.hudSuppressed) return;
   const spec = hudSpec(state.ctx, snapshot, state.config.language, state.config, state.hudPriority);
@@ -705,7 +746,7 @@ async function updateHudForState(state, snapshot, generation) {
       const wasCurrentPinned = state.pinned === pinned;
       if (wasCurrentPinned) state.pinned = null;
       if (wasCurrentPinned && isInactiveBubbleError(error)) {
-        state.hudSuppressed = true;
+        setHudSuppressed(state, true);
         return;
       }
       await warn(state, "system resources HUD update failed", error);
@@ -717,7 +758,7 @@ async function updateHudForState(state, snapshot, generation) {
   try {
     bubble = await state.ctx.ui.bubble(spec);
   } catch (error) {
-    state.hudSuppressed = true;
+    setHudSuppressed(state, true);
     await warn(state, "system resources HUD creation failed", error);
     return;
   }
@@ -726,7 +767,7 @@ async function updateHudForState(state, snapshot, generation) {
     return;
   }
   if (!await probeBubbleLiveness(state, bubble, state.hudPriority)) {
-    state.hudSuppressed = true;
+    setHudSuppressed(state, true);
     return;
   }
   if (!isCurrent(state, generation) || !effectiveVisibility(state) || state.hudSuppressed) {
@@ -737,7 +778,7 @@ async function updateHudForState(state, snapshot, generation) {
   bubble.onDismiss((reason) => {
     if (state.pinned?.id !== bubble.id) return;
     state.pinned = null;
-    if (reason === "replaced") state.hudSuppressed = true;
+    if (reason === "replaced") setHudSuppressed(state, true);
   });
 }
 
@@ -952,8 +993,9 @@ async function setHudVisibility(state, visible) {
   if (!state.active) return state.currentSnapshot;
   state.hudVisible = visible;
   state.visibilitySource = "command";
+  await syncHudCommand(state);
   if (visible) {
-    state.hudSuppressed = false;
+    setHudSuppressed(state, false);
     state.hudPriority = "normal";
   }
   state.generation += 1;
@@ -988,8 +1030,9 @@ async function handleConfigChange(state, raw) {
   if (visibilityChanged) {
     state.hudVisible = next.showHud;
     state.visibilitySource = "config";
+    await syncHudCommand(state);
     if (next.showHud) {
-      state.hudSuppressed = false;
+      setHudSuppressed(state, false);
       state.hudPriority = "low";
     }
     if (!next.showHud) await dismissPinned(state);
@@ -1097,6 +1140,8 @@ export function register(OpenPetsPlugin) {
         visibilitySource: "config",
         visibilityDirty: false,
         hudSuppressed: false,
+        hudCommandId: null,
+        hudCommandSync: Promise.resolve(),
         hudPriority: "low",
         pinned: null,
         currentSnapshot: null,
@@ -1122,18 +1167,19 @@ export function register(OpenPetsPlugin) {
         await warn(state, "system resources click subscription failed", error);
       }
 
-      const icon = ctx.assets.icon("system-resources");
-      const commandSpecs = [
-        ["show", "$t:command.show.title", "$t:command.show.description", () => setHudVisibility(state, true)],
-        ["hide", "$t:command.hide.title", "$t:command.hide.description", () => setHudVisibility(state, false)],
-        ["snapshot", "$t:command.snapshot.title", "$t:command.snapshot.description", () => speakSnapshotForState(state)],
-      ];
-      for (const [id, title, description, handler] of commandSpecs) {
-        try {
-          await ctx.commands.register({ id, title, description, icon }, handler);
-        } catch (error) {
-          await warn(state, `system resources command registration failed: ${id}`, error);
-        }
+      await syncHudCommand(state);
+      try {
+        await ctx.commands.register(
+          {
+            id: "snapshot",
+            title: "$t:command.snapshot.title",
+            description: "$t:command.snapshot.description",
+            icon: ctx.assets.icon("system-resources"),
+          },
+          () => speakSnapshotForState(state),
+        );
+      } catch (error) {
+        await warn(state, "system resources command registration failed: snapshot", error);
       }
 
       if (ctx.assistant?.registerCapability) {
